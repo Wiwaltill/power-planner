@@ -1,5 +1,5 @@
 let devices = [];
-const apiUrl = 'devices.php?api=1';
+const apiUrl = 'devices?api=1';
 const amp = device => Number(device.power_w) / Number(device.voltage_v || 230);
 const slug = text => text.toLowerCase().trim().replace(/[^a-z0-9äöüß]+/gi, '-').replace(/^-|-$/g, '');
 
@@ -83,4 +83,42 @@ document.getElementById('deviceForm').addEventListener('submit', async event => 
 });
 
 document.getElementById('resetForm').addEventListener('click', resetForm);
+
+const exportDevicesButton = document.getElementById('exportDevices');
+if (exportDevicesButton) {
+  exportDevicesButton.addEventListener('click', () => {
+    window.location.href = `${apiUrl}&export=1`;
+  });
+}
+
+const importDevicesButton = document.getElementById('importDevices');
+const importDevicesFile = document.getElementById('importDevicesFile');
+if (importDevicesButton && importDevicesFile) {
+  importDevicesButton.addEventListener('click', () => importDevicesFile.click());
+  importDevicesFile.addEventListener('change', async event => {
+    const file = event.target.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+      const response = await fetch(`${apiUrl}&import=1`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(json)
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        alert(result.error || 'Geräte-Import fehlgeschlagen.');
+        return;
+      }
+      await loadDevices();
+      alert(`${result.imported} Gerät(e) importiert. Insgesamt sind jetzt ${result.total} Gerät(e) gespeichert.`);
+    } catch (error) {
+      alert('Die ausgewählte Datei konnte nicht als Geräte-JSON importiert werden.');
+    } finally {
+      importDevicesFile.value = '';
+    }
+  });
+}
+
 loadDevices();
