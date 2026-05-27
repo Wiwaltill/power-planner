@@ -76,7 +76,7 @@
       <table class="table table-hover align-middle">
         <thead>
           <tr>
-            <th>Gerät</th><th>Kategorie</th><th>Anzahl</th><th>Phase</th><th>Leistung</th><th>Strom</th><th></th>
+            <th>Gerät</th><th>Marke</th><th>Kategorie</th><th>Anzahl</th><th>Phase</th><th>Leistung</th><th>Strom</th><th></th>
           </tr>
         </thead>
         <tbody id="planRows"></tbody>
