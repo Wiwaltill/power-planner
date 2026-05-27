@@ -1,0 +1,13 @@
+RewriteEngine On
+
+# Saubere URLs ohne .php
+RewriteCond %{THE_REQUEST} \s/+(.+?)\.php[\s?] [NC]
+RewriteRule ^ %1 [R=301,L]
+
+# /devices intern auf devices.php abbilden
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^(.+?)/?$ $1.php [L,QSA]
+
+# Startseite bleibt ohne index.php erreichbar
+DirectoryIndex index.php
