@@ -31,7 +31,9 @@
         <form id="loadForm" class="row g-3">
           <div class="col-12">
             <label class="form-label">Gerät</label>
+            <input type="search" class="form-control mb-2" id="deviceSearch" placeholder="Gerät, Marke oder Kategorie suchen..." autocomplete="off">
             <select class="form-select" id="deviceSelect" required></select>
+            <div class="form-text" id="deviceSearchInfo">Tippe zum Filtern der Geräteauswahl.</div>
           </div>
           <div class="col-md-4">
             <label class="form-label">Anzahl</label>
@@ -85,7 +87,7 @@
     <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
       <div>
         <h2 class="h4 mb-0">Aktueller Stromplan</h2>
-        <div class="small-muted">Tabellarische Übersicht. Verschieben erfolgt oben per Drag & Drop.</div>
+        <div class="small-muted">Tabellarische Übersicht. Anzahl und Bemerkungen kannst du direkt bearbeiten; Verschieben erfolgt oben per Drag & Drop.</div>
       </div>
     </div>
     <div class="table-responsive">
