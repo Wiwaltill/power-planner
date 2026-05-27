@@ -80,7 +80,7 @@ function renderDeviceSelect() {
 }
 
 async function loadDevices() {
-  const response = await fetch('devices.php?api=1');
+  const response = await fetch('devices?api=1');
   devices = await response.json();
   renderDeviceSelect();
 }
