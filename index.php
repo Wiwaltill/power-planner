@@ -31,10 +31,17 @@
         <form id="loadForm" class="row g-3">
           <div class="col-12">
             <label class="form-label">Gerät</label>
-            <input type="search" class="form-control" id="deviceSearch" list="deviceOptions" placeholder="Gerät suchen oder aus Liste wählen..." autocomplete="off" required>
-            <datalist id="deviceOptions"></datalist>
-            <input type="hidden" id="deviceSelect">
-            <div class="form-text" id="deviceSearchInfo">Tippe, um die Geräte direkt im Feld zu filtern oder wähle einen Eintrag aus.</div>
+            <div class="dropdown w-100 device-dropdown">
+              <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center" type="button" id="deviceDropdownButton" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                <span id="deviceDropdownLabel">Gerät suchen oder auswählen...</span>
+              </button>
+              <div class="dropdown-menu w-100 p-2 device-dropdown-menu" aria-labelledby="deviceDropdownButton">
+                <input type="search" class="form-control form-control-sm mb-2" id="deviceSearch" placeholder="Gerät filtern..." autocomplete="off">
+                <div id="deviceOptions" class="device-options list-group list-group-flush"></div>
+              </div>
+            </div>
+            <input type="hidden" id="deviceSelect" required>
+            <div class="form-text" id="deviceSearchInfo">Gerät per Bootstrap-Dropdown öffnen und direkt filtern.</div>
           </div>
           <div class="col-md-4">
             <label class="form-label">Anzahl</label>
