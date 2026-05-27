@@ -2,17 +2,14 @@
 $sampleFile = __DIR__ . '/data/devices.json';
 $dataFile = __DIR__ . '/data/devices.user.json';
 
-function ensureDeviceDataFile($dataFile, $sampleFile) {
+function ensureDeviceDataDirectory($dataFile) {
     if (!file_exists(dirname($dataFile))) {
         mkdir(dirname($dataFile), 0775, true);
     }
-    if (!file_exists($dataFile)) {
-        if (file_exists($sampleFile)) {
-            copy($sampleFile, $dataFile);
-        } else {
-            file_put_contents($dataFile, '[]');
-        }
-    }
+}
+
+function activeDeviceFile($dataFile, $sampleFile) {
+    return file_exists($dataFile) ? $dataFile : $sampleFile;
 }
 
 function readDevices($file) {
@@ -27,8 +24,9 @@ function writeDevices($file, $devices) {
 
 if (isset($_GET['api'])) {
     header('Content-Type: application/json; charset=utf-8');
-    ensureDeviceDataFile($dataFile, $sampleFile);
-    $devices = readDevices($dataFile);
+    ensureDeviceDataDirectory($dataFile);
+    $hasUserDevices = file_exists($dataFile);
+    $devices = readDevices(activeDeviceFile($dataFile, $sampleFile));
     $method = $_SERVER['REQUEST_METHOD'];
     $input = json_decode(file_get_contents('php://input'), true) ?: [];
 
@@ -81,6 +79,9 @@ if (isset($_GET['api'])) {
             exit;
         }
 
+        // Sample-Geräte sind nur eine Startvorlage. Beim ersten Import werden sie nicht übernommen.
+        if (!$hasUserDevices) { $devices = []; }
+
         $byId = [];
         foreach ($devices as $device) {
             if (isset($device['id'])) { $byId[$device['id']] = $device; }
@@ -116,6 +117,8 @@ if (isset($_GET['api'])) {
             echo json_encode(['error' => 'Name und Leistung sind erforderlich.']);
             exit;
         }
+        // Sample-Geräte sind nur eine Startvorlage. Beim ersten eigenen Speichern startet die Nutzerdatei leer.
+        if (!$hasUserDevices) { $devices = []; }
         $devices = array_values(array_filter($devices, fn($d) => $d['id'] !== $device['id']));
         $devices[] = $device;
         writeDevices($dataFile, $devices);
@@ -124,6 +127,7 @@ if (isset($_GET['api'])) {
     }
     if ($method === 'DELETE') {
         $id = $_GET['id'] ?? '';
+        // Wird ein Sample-Gerät gelöscht, entsteht daraus eine eigene Nutzerliste ohne dieses Gerät.
         $devices = array_values(array_filter($devices, fn($d) => $d['id'] !== $id));
         writeDevices($dataFile, $devices);
         echo json_encode(['ok' => true]);
