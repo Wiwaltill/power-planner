@@ -1,6 +1,7 @@
 const phases = ['L1', 'L2', 'L3'];
 let devices = [];
 let plan = JSON.parse(localStorage.getItem('stromplan.plan') || '[]');
+plan = plan.map(item => ({ remarks: '', ...item }));
 
 const fmtW = value => `${Math.round(value).toLocaleString('de-DE')} W`;
 const fmtA = value => `${value.toFixed(2).replace('.', ',')} A`;
@@ -73,6 +74,7 @@ function renderPlanCard(item) {
       <div>
         <strong>${item.brand ? item.brand + ' · ' : ''}${item.name}</strong>
         <div class="small-muted">${item.category || '-'} · Anzahl: ${item.quantity} · ${fmtW(item.total_w)}</div>
+        ${item.remarks ? `<div class="plan-remarks mt-1">${esc(item.remarks)}</div>` : ''}
       </div>
       <button class="btn btn-sm btn-outline-danger" onclick="removeItem(${index})" title="Entfernen">×</button>
     </div>
@@ -144,12 +146,13 @@ function renderPrintExport() {
       <td>${item.quantity}</td>
       <td>${fmtW(item.total_w)}</td>
       <td>${fmtA(item.total_a)}</td>
-    </tr>`).join('') : '<tr><td colspan="5">Keine Geräte auf dieser Phase.</td></tr>';
+      <td>${esc(item.remarks || '-')}</td>
+    </tr>`).join('') : '<tr><td colspan="6">Keine Geräte auf dieser Phase.</td></tr>';
 
     return `<div class="print-phase-block">
       <h3>${phase} · ${fmtA(totals[phase].amps)} · ${fmtW(totals[phase].watts)}</h3>
       <table class="print-table">
-        <thead><tr><th>Gerät</th><th>Kategorie</th><th>Anzahl</th><th>Leistung</th><th>Strom</th></tr></thead>
+        <thead><tr><th>Gerät</th><th>Kategorie</th><th>Anzahl</th><th>Leistung</th><th>Strom</th><th>Bemerkungen</th></tr></thead>
         <tbody>${body}</tbody>
       </table>
     </div>`;
@@ -163,7 +166,8 @@ function renderPrintExport() {
     <td>${item.phase}</td>
     <td>${fmtW(item.total_w)}</td>
     <td>${fmtA(item.total_a)}</td>
-  </tr>`).join('') : '<tr><td colspan="7">Noch keine Geräte im Plan.</td></tr>';
+    <td>${esc(item.remarks || '-')}</td>
+  </tr>`).join('') : '<tr><td colspan="8">Noch keine Geräte im Plan.</td></tr>';
 }
 
 function exportPdf() {
@@ -174,7 +178,7 @@ function exportPdf() {
 function renderPlan() {
   const body = document.getElementById('planRows');
   if (!plan.length) {
-    body.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Noch keine Geräte im Plan.</td></tr>';
+    body.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">Noch keine Geräte im Plan.</td></tr>';
   } else {
     body.innerHTML = plan.map((item, index) => `<tr>
       <td>${item.name}</td>
@@ -184,6 +188,7 @@ function renderPlan() {
       <td><span class="badge text-bg-dark">${item.phase}</span></td>
       <td>${fmtW(item.total_w)}</td>
       <td>${fmtA(item.total_a)}</td>
+      <td>${item.remarks ? esc(item.remarks) : '-'}</td>
       <td class="text-end"><button class="btn btn-sm btn-outline-danger" onclick="removeItem(${index})">Entfernen</button></td>
     </tr>`).join('');
   }
@@ -212,10 +217,12 @@ document.getElementById('loadForm').addEventListener('submit', event => {
     category: device.category,
     quantity,
     phase: document.getElementById('phase').value,
+    remarks: document.getElementById('remarks').value.trim(),
     voltage_v: voltage,
     total_w: totalW,
     total_a: calcAmp(totalW, voltage)
   });
+  document.getElementById('remarks').value = '';
   savePlan();
   renderPlan();
 });
@@ -228,7 +235,53 @@ document.getElementById('clearPlan').addEventListener('click', () => {
   }
 });
 
+
+function normalizeImportedPlan(importedPlan) {
+  if (!Array.isArray(importedPlan)) throw new Error('Keine gültige Planliste gefunden.');
+  return importedPlan.map(item => {
+    const quantity = Number(item.quantity || 1);
+    const voltage = Number(item.voltage_v || 230);
+    const totalW = Number(item.total_w || (quantity * Number(item.power_w || 0)));
+    return {
+      id: item.id || crypto.randomUUID(),
+      device_id: item.device_id || '',
+      name: String(item.name || 'Unbenanntes Gerät'),
+      brand: String(item.brand || ''),
+      category: String(item.category || ''),
+      quantity,
+      phase: phases.includes(item.phase) ? item.phase : 'L1',
+      remarks: String(item.remarks || ''),
+      voltage_v: voltage,
+      total_w: totalW,
+      total_a: Number(item.total_a || calcAmp(totalW, voltage))
+    };
+  });
+}
+
+function importJsonFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      const importedPlan = Array.isArray(data) ? data : data.plan;
+      const nextPlan = normalizeImportedPlan(importedPlan);
+      if (!confirm(`Importierten Plan mit ${nextPlan.length} Einträgen laden? Der aktuelle Plan wird ersetzt.`)) return;
+      plan = nextPlan;
+      savePlan();
+      renderPlan();
+    } catch (error) {
+      alert('JSON konnte nicht importiert werden: ' + error.message);
+    } finally {
+      document.getElementById('importJsonFile').value = '';
+    }
+  };
+  reader.readAsText(file);
+}
+
 document.getElementById('exportPdf').addEventListener('click', exportPdf);
+document.getElementById('importJson').addEventListener('click', () => document.getElementById('importJsonFile').click());
+document.getElementById('importJsonFile').addEventListener('change', event => importJsonFile(event.target.files[0]));
 
 document.getElementById('exportJson').addEventListener('click', () => {
   const blob = new Blob([JSON.stringify({ exported_at: new Date().toISOString(), plan, totals: phaseTotals() }, null, 2)], { type: 'application/json' });
