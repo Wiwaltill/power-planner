@@ -10,3 +10,15 @@ body { background: var(--app-bg); }
 .badge-soft { background: #eef2ff; color: #334155; }
 .small-muted { color: #64748b; font-size: .9rem; }
 .progress { height: .65rem; border-radius: 999px; }
+
+.planner-form-card { top: 1rem; z-index: 1; }
+.phase-dropzone { min-height: 560px; overflow: hidden; transition: transform .15s ease, box-shadow .15s ease, outline-color .15s ease; }
+.phase-dropzone.warning { border-left: 6px solid #ffc107; }
+.phase-dropzone.danger { border-left: 6px solid #dc3545; }
+.phase-dropzone.drag-over { outline: 3px dashed #0d6efd; outline-offset: -10px; transform: translateY(-2px); box-shadow: 0 12px 30px rgba(13, 110, 253, .18); }
+.phase-board-header { background: rgba(248, 250, 252, .8); }
+.phase-items { min-height: 390px; display: flex; flex-direction: column; gap: .75rem; }
+.plan-card { border: 1px solid #e2e8f0; border-radius: .85rem; background: #fff; padding: .85rem; cursor: grab; box-shadow: 0 6px 16px rgba(15, 23, 42, .06); transition: transform .15s ease, opacity .15s ease, box-shadow .15s ease; }
+.plan-card:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(15, 23, 42, .1); }
+.plan-card.dragging { opacity: .45; cursor: grabbing; }
+.empty-phase { min-height: 120px; border: 2px dashed #cbd5e1; border-radius: .85rem; color: #64748b; display: flex; align-items: center; justify-content: center; text-align: center; padding: 1rem; background: #f8fafc; }
