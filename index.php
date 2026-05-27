@@ -31,9 +31,10 @@
         <form id="loadForm" class="row g-3">
           <div class="col-12">
             <label class="form-label">Gerät</label>
-            <input type="search" class="form-control mb-2" id="deviceSearch" placeholder="Gerät, Marke oder Kategorie suchen..." autocomplete="off">
-            <select class="form-select" id="deviceSelect" required></select>
-            <div class="form-text" id="deviceSearchInfo">Tippe zum Filtern der Geräteauswahl.</div>
+            <input type="search" class="form-control" id="deviceSearch" list="deviceOptions" placeholder="Gerät suchen oder aus Liste wählen..." autocomplete="off" required>
+            <datalist id="deviceOptions"></datalist>
+            <input type="hidden" id="deviceSelect">
+            <div class="form-text" id="deviceSearchInfo">Tippe, um die Geräte direkt im Feld zu filtern oder wähle einen Eintrag aus.</div>
           </div>
           <div class="col-md-4">
             <label class="form-label">Anzahl</label>
