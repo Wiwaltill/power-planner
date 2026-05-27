@@ -26,6 +26,7 @@ if (isset($_GET['api'])) {
         $device = [
             'id' => trim($id, '-'),
             'name' => trim($input['name'] ?? ''),
+            'brand' => trim($input['brand'] ?? ''),
             'category' => trim($input['category'] ?? ''),
             'power_w' => (float)($input['power_w'] ?? 0),
             'voltage_v' => (float)($input['voltage_v'] ?? 230),
@@ -86,7 +87,8 @@ if (isset($_GET['api'])) {
         <p class="small-muted mb-4">Speichere Stammdaten, die später im Stromplan auswählbar sind.</p>
         <form id="deviceForm" class="row g-3">
           <input type="hidden" id="deviceId">
-          <div class="col-12"><label class="form-label">Name</label><input class="form-control" id="name" required></div>
+          <div class="col-md-6"><label class="form-label">Name</label><input class="form-control" id="name" required></div>
+          <div class="col-md-6"><label class="form-label">Marke</label><input class="form-control" id="brand" placeholder="z.B. Cameo, Eurolite..."></div>
           <div class="col-md-6"><label class="form-label">Kategorie</label><input class="form-control" id="category" placeholder="z.B. Scheinwerfer"></div>
           <div class="col-md-6"><label class="form-label">Leistung in W</label><input type="number" class="form-control" id="power" min="1" required></div>
           <div class="col-md-6"><label class="form-label">Spannung in V</label><input type="number" class="form-control" id="voltage" min="1" value="230"></div>
@@ -104,7 +106,7 @@ if (isset($_GET['api'])) {
         <h2 class="h4 mb-3">Geräteliste</h2>
         <div class="table-responsive">
           <table class="table table-hover">
-            <thead><tr><th>Name</th><th>W</th><th>A bei 230 V</th><th>Anschluss</th><th></th></tr></thead>
+            <thead><tr><th>Name</th><th>Marke</th><th>W</th><th>A bei 230 V</th><th>Anschluss</th><th></th></tr></thead>
             <tbody id="deviceRows"></tbody>
           </table>
         </div>
