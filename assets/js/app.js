@@ -10,7 +10,7 @@ async function loadDevices() {
   const response = await fetch('devices.php?api=1');
   devices = await response.json();
   const select = document.getElementById('deviceSelect');
-  select.innerHTML = devices.map(device => `<option value="${device.id}">${device.name} (${device.power_w} W)</option>`).join('');
+  select.innerHTML = devices.map(device => `<option value="${device.id}">${device.brand ? device.brand + ' - ' : ''}${device.name} (${device.power_w} W)</option>`).join('');
   if (!devices.length) select.innerHTML = '<option value="">Bitte zuerst Geräte anlegen</option>';
 }
 
@@ -49,10 +49,11 @@ function renderSummary() {
 function renderPlan() {
   const body = document.getElementById('planRows');
   if (!plan.length) {
-    body.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Noch keine Geräte im Plan.</td></tr>';
+    body.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Noch keine Geräte im Plan.</td></tr>';
   } else {
     body.innerHTML = plan.map((item, index) => `<tr>
       <td>${item.name}</td>
+      <td>${item.brand || '-'}</td>
       <td>${item.category || '-'}</td>
       <td>${item.quantity}</td>
       <td><span class="badge text-bg-dark">${item.phase}</span></td>
@@ -82,6 +83,7 @@ document.getElementById('loadForm').addEventListener('submit', event => {
     id: crypto.randomUUID(),
     device_id: device.id,
     name: device.name,
+    brand: device.brand || '',
     category: device.category,
     quantity,
     phase: document.getElementById('phase').value,
