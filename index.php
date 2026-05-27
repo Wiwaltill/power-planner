@@ -10,12 +10,12 @@
 <body>
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
   <div class="container">
-    <a class="navbar-brand" href="index.php">⚡ Stromplaner</a>
+    <a class="navbar-brand" href="./">⚡ Stromplaner</a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav"><span class="navbar-toggler-icon"></span></button>
     <div class="collapse navbar-collapse" id="nav">
       <ul class="navbar-nav ms-auto">
-        <li class="nav-item"><a class="nav-link active" href="index.php">Planung</a></li>
-        <li class="nav-item"><a class="nav-link" href="devices.php">Geräte</a></li>
+        <li class="nav-item"><a class="nav-link active" href="./">Planung</a></li>
+        <li class="nav-item"><a class="nav-link" href="devices">Geräte</a></li>
       </ul>
     </div>
   </div>
