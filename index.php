@@ -50,15 +50,21 @@
             <input type="number" class="form-control" id="voltage" value="230" min="1" required>
           </div>
           <div class="col-12">
+            <label class="form-label">Bemerkungen</label>
+            <textarea class="form-control" id="remarks" rows="2" placeholder="z. B. Position, DMX, Sicherung, Besonderheiten"></textarea>
+          </div>
+          <div class="col-12">
             <button class="btn btn-primary w-100" type="submit">Zum Plan hinzufügen</button>
           </div>
         </form>
 
         <hr class="my-4">
-        <div class="d-flex gap-2">
-          <button class="btn btn-outline-secondary btn-sm flex-fill" id="exportJson">JSON exportieren</button>
-          <button class="btn btn-outline-primary btn-sm flex-fill" id="exportPdf">PDF exportieren</button>
-          <button class="btn btn-outline-danger btn-sm flex-fill" id="clearPlan">Plan leeren</button>
+        <div class="d-flex gap-2 flex-wrap">
+          <button class="btn btn-outline-secondary btn-sm flex-fill" id="exportJson" type="button">JSON exportieren</button>
+          <button class="btn btn-outline-success btn-sm flex-fill" id="importJson" type="button">JSON importieren</button>
+          <button class="btn btn-outline-primary btn-sm flex-fill" id="exportPdf" type="button">PDF exportieren</button>
+          <button class="btn btn-outline-danger btn-sm flex-fill" id="clearPlan" type="button">Plan leeren</button>
+          <input type="file" id="importJsonFile" accept="application/json,.json" class="d-none">
         </div>
       </div>
     </div>
@@ -86,7 +92,7 @@
       <table class="table table-hover align-middle">
         <thead>
           <tr>
-            <th>Gerät</th><th>Marke</th><th>Kategorie</th><th>Anzahl</th><th>Phase</th><th>Leistung</th><th>Strom</th><th></th>
+            <th>Gerät</th><th>Marke</th><th>Kategorie</th><th>Anzahl</th><th>Phase</th><th>Leistung</th><th>Strom</th><th>Bemerkungen</th><th></th>
           </tr>
         </thead>
         <tbody id="planRows"></tbody>
@@ -113,7 +119,7 @@
     <h2>Gesamtliste</h2>
     <table class="print-table">
       <thead>
-        <tr><th>Gerät</th><th>Marke</th><th>Kategorie</th><th>Anzahl</th><th>Phase</th><th>Leistung</th><th>Strom</th></tr>
+        <tr><th>Gerät</th><th>Marke</th><th>Kategorie</th><th>Anzahl</th><th>Phase</th><th>Leistung</th><th>Strom</th><th>Bemerkungen</th></tr>
       </thead>
       <tbody id="printRows"></tbody>
     </table>
