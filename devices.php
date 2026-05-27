@@ -1,5 +1,19 @@
 <?php
-$dataFile = __DIR__ . '/data/devices.json';
+$sampleFile = __DIR__ . '/data/devices.json';
+$dataFile = __DIR__ . '/data/devices.user.json';
+
+function ensureDeviceDataFile($dataFile, $sampleFile) {
+    if (!file_exists(dirname($dataFile))) {
+        mkdir(dirname($dataFile), 0775, true);
+    }
+    if (!file_exists($dataFile)) {
+        if (file_exists($sampleFile)) {
+            copy($sampleFile, $dataFile);
+        } else {
+            file_put_contents($dataFile, '[]');
+        }
+    }
+}
 
 function readDevices($file) {
     if (!file_exists($file)) { return []; }
@@ -13,9 +27,73 @@ function writeDevices($file, $devices) {
 
 if (isset($_GET['api'])) {
     header('Content-Type: application/json; charset=utf-8');
+    ensureDeviceDataFile($dataFile, $sampleFile);
     $devices = readDevices($dataFile);
     $method = $_SERVER['REQUEST_METHOD'];
     $input = json_decode(file_get_contents('php://input'), true) ?: [];
+
+    if ($method === 'GET' && (($_GET['export'] ?? '') === '1')) {
+        $filename = 'stromplaner-geraete-' . date('Y-m-d') . '.json';
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        echo json_encode($devices, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    if ($method === 'POST' && (($_GET['import'] ?? '') === '1')) {
+        $importDevices = [];
+        if (isset($input['devices']) && is_array($input['devices'])) {
+            $importDevices = $input['devices'];
+        } elseif (is_array($input)) {
+            $importDevices = $input;
+        }
+
+        if (!is_array($importDevices) || count($importDevices) === 0) {
+            http_response_code(422);
+            echo json_encode(['error' => 'Die Import-Datei enthält keine Geräte.']);
+            exit;
+        }
+
+        $normalized = [];
+        foreach ($importDevices as $item) {
+            if (!is_array($item)) { continue; }
+            $name = trim($item['name'] ?? '');
+            $power = (float)($item['power_w'] ?? 0);
+            if ($name === '' || $power <= 0) { continue; }
+            $id = trim($item['id'] ?? '');
+            if ($id === '') {
+                $id = strtolower(preg_replace('/[^a-z0-9]+/i', '-', $name));
+            }
+            $normalized[] = [
+                'id' => trim($id, '-'),
+                'name' => $name,
+                'brand' => trim($item['brand'] ?? ''),
+                'category' => trim($item['category'] ?? ''),
+                'power_w' => $power,
+                'voltage_v' => (float)($item['voltage_v'] ?? 230),
+                'connector' => trim($item['connector'] ?? ''),
+                'notes' => trim($item['notes'] ?? '')
+            ];
+        }
+
+        if (count($normalized) === 0) {
+            http_response_code(422);
+            echo json_encode(['error' => 'Es wurden keine gültigen Geräte gefunden. Name und Leistung sind erforderlich.']);
+            exit;
+        }
+
+        $byId = [];
+        foreach ($devices as $device) {
+            if (isset($device['id'])) { $byId[$device['id']] = $device; }
+        }
+        foreach ($normalized as $device) {
+            $byId[$device['id']] = $device;
+        }
+        $devices = array_values($byId);
+        usort($devices, fn($a, $b) => strcasecmp($a['name'] ?? '', $b['name'] ?? ''));
+        writeDevices($dataFile, $devices);
+        echo json_encode(['ok' => true, 'imported' => count($normalized), 'total' => count($devices)], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
 
     if ($method === 'GET') {
         echo json_encode($devices, JSON_UNESCAPED_UNICODE);
@@ -68,12 +146,12 @@ if (isset($_GET['api'])) {
 <body>
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
   <div class="container">
-    <a class="navbar-brand" href="index.php">⚡ Stromplaner</a>
+    <a class="navbar-brand" href="./">⚡ Stromplaner</a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav"><span class="navbar-toggler-icon"></span></button>
     <div class="collapse navbar-collapse" id="nav">
       <ul class="navbar-nav ms-auto">
-        <li class="nav-item"><a class="nav-link" href="index.php">Planung</a></li>
-        <li class="nav-item"><a class="nav-link active" href="devices.php">Geräte</a></li>
+        <li class="nav-item"><a class="nav-link" href="./">Planung</a></li>
+        <li class="nav-item"><a class="nav-link active" href="devices">Geräte</a></li>
       </ul>
     </div>
   </div>
@@ -103,7 +181,14 @@ if (isset($_GET['api'])) {
     </div>
     <div class="col-lg-7">
       <div class="card p-4">
-        <h2 class="h4 mb-3">Geräteliste</h2>
+        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+          <h2 class="h4 mb-0">Geräteliste</h2>
+          <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-outline-primary btn-sm" id="exportDevices" type="button">Geräte exportieren</button>
+            <button class="btn btn-outline-success btn-sm" id="importDevices" type="button">Geräte importieren</button>
+            <input type="file" id="importDevicesFile" accept="application/json,.json" class="d-none">
+          </div>
+        </div>
         <div class="table-responsive">
           <table class="table table-hover">
             <thead><tr><th>Name</th><th>Marke</th><th>W</th><th>A bei 230 V</th><th>Anschluss</th><th></th></tr></thead>
