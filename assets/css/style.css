@@ -26,6 +26,7 @@ body { background: var(--app-bg); }
 .plan-quantity-input { max-width: 80px; }
 .plan-remarks-input { min-width: 200px; resize: vertical; }
 #deviceSearchInfo { min-height: 1.2rem; }
+#deviceSearch { min-height: 38px; }
 
 .print-area { display: none; }
 
