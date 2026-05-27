@@ -21,29 +21,101 @@ function savePlan() {
 function phaseTotals() {
   const totals = { L1: { watts: 0, amps: 0 }, L2: { watts: 0, amps: 0 }, L3: { watts: 0, amps: 0 } };
   plan.forEach(item => {
-    totals[item.phase].watts += item.total_w;
-    totals[item.phase].amps += item.total_a;
+    if (!totals[item.phase]) item.phase = 'L1';
+    totals[item.phase].watts += Number(item.total_w || 0);
+    totals[item.phase].amps += Number(item.total_a || 0);
   });
   return totals;
 }
 
-function renderSummary() {
+function statusClass(amps) {
+  if (amps >= 16) return 'danger';
+  if (amps >= 13) return 'warning';
+  return '';
+}
+
+function renderPhaseBoards() {
   const totals = phaseTotals();
-  document.getElementById('phaseSummary').innerHTML = phases.map(phase => {
+  const boards = document.getElementById('phaseBoards');
+
+  boards.innerHTML = phases.map(phase => {
+    const items = plan.filter(item => item.phase === phase);
     const amps = totals[phase].amps;
-    const status = amps >= 16 ? 'danger' : amps >= 13 ? 'warning' : '';
     const progress = Math.min((amps / 16) * 100, 100);
-    return `<div class="col-md-4">
-      <div class="card p-3 phase-card ${status}">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h2 class="h5 mb-0">${phase}</h2><span class="badge badge-soft">max. 16 A</span>
+    const status = statusClass(amps);
+
+    return `<div class="col-12 col-xl-4">
+      <section class="card phase-dropzone ${status}" data-phase="${phase}">
+        <div class="phase-board-header p-3 border-bottom">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h3 class="h4 mb-0">${phase}</h3>
+            <span class="badge badge-soft">${items.length} Gerät${items.length === 1 ? '' : 'e'}</span>
+          </div>
+          <div class="phase-value">${fmtA(amps)}</div>
+          <div class="small-muted mb-2">${fmtW(totals[phase].watts)} gesamt</div>
+          <div class="progress"><div class="progress-bar" style="width:${progress}%"></div></div>
         </div>
-        <div class="phase-value">${fmtA(amps)}</div>
-        <div class="small-muted mb-2">${fmtW(totals[phase].watts)}</div>
-        <div class="progress"><div class="progress-bar" style="width:${progress}%"></div></div>
-      </div>
+        <div class="phase-items p-3" data-phase="${phase}">
+          ${items.length ? items.map(item => renderPlanCard(item)).join('') : '<div class="empty-phase">Geräte hier ablegen</div>'}
+        </div>
+      </section>
     </div>`;
   }).join('');
+
+  registerDragAndDrop();
+}
+
+function renderPlanCard(item) {
+  const index = plan.findIndex(entry => entry.id === item.id);
+  return `<article class="plan-card" draggable="true" data-id="${item.id}">
+    <div class="d-flex justify-content-between gap-2">
+      <div>
+        <strong>${item.brand ? item.brand + ' · ' : ''}${item.name}</strong>
+        <div class="small-muted">${item.category || '-'} · Anzahl: ${item.quantity} · ${fmtW(item.total_w)}</div>
+      </div>
+      <button class="btn btn-sm btn-outline-danger" onclick="removeItem(${index})" title="Entfernen">×</button>
+    </div>
+    <div class="d-flex justify-content-between align-items-center mt-2">
+      <span class="badge text-bg-dark">${item.phase}</span>
+      <span class="fw-semibold">${fmtA(item.total_a)}</span>
+    </div>
+  </article>`;
+}
+
+function registerDragAndDrop() {
+  document.querySelectorAll('.plan-card').forEach(card => {
+    card.addEventListener('dragstart', event => {
+      event.dataTransfer.setData('text/plain', card.dataset.id);
+      event.dataTransfer.effectAllowed = 'move';
+      card.classList.add('dragging');
+    });
+    card.addEventListener('dragend', () => card.classList.remove('dragging'));
+  });
+
+  document.querySelectorAll('.phase-dropzone, .phase-items').forEach(zone => {
+    zone.addEventListener('dragover', event => {
+      event.preventDefault();
+      zone.closest('.phase-dropzone').classList.add('drag-over');
+    });
+    zone.addEventListener('dragleave', event => {
+      if (!zone.contains(event.relatedTarget)) zone.closest('.phase-dropzone').classList.remove('drag-over');
+    });
+    zone.addEventListener('drop', event => {
+      event.preventDefault();
+      const id = event.dataTransfer.getData('text/plain');
+      const phase = zone.dataset.phase || zone.closest('.phase-dropzone').dataset.phase;
+      moveItemToPhase(id, phase);
+      document.querySelectorAll('.drag-over').forEach(element => element.classList.remove('drag-over'));
+    });
+  });
+}
+
+function moveItemToPhase(id, phase) {
+  const item = plan.find(entry => entry.id === id);
+  if (!item || !phases.includes(phase)) return;
+  item.phase = phase;
+  savePlan();
+  renderPlan();
 }
 
 function renderPlan() {
@@ -62,7 +134,7 @@ function renderPlan() {
       <td class="text-end"><button class="btn btn-sm btn-outline-danger" onclick="removeItem(${index})">Entfernen</button></td>
     </tr>`).join('');
   }
-  renderSummary();
+  renderPhaseBoards();
 }
 
 function removeItem(index) {
