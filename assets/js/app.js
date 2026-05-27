@@ -5,6 +5,7 @@ let plan = JSON.parse(localStorage.getItem('stromplan.plan') || '[]');
 const fmtW = value => `${Math.round(value).toLocaleString('de-DE')} W`;
 const fmtA = value => `${value.toFixed(2).replace('.', ',')} A`;
 const calcAmp = (watts, voltage) => watts / voltage;
+const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
 
 async function loadDevices() {
   const response = await fetch('devices.php?api=1');
@@ -118,6 +119,58 @@ function moveItemToPhase(id, phase) {
   renderPlan();
 }
 
+
+function renderPrintExport() {
+  const totals = phaseTotals();
+  const now = new Date();
+  document.getElementById('printDate').textContent = `Exportiert am ${now.toLocaleDateString('de-DE')} um ${now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`;
+
+  document.getElementById('printSummary').innerHTML = phases.map(phase => {
+    const amps = totals[phase].amps;
+    const statusText = amps >= 16 ? 'Über 16 A' : amps >= 13 ? 'Nahe Grenze' : 'OK';
+    return `<div class="print-summary-card">
+      <div class="print-phase-name">${phase}</div>
+      <div><strong>${fmtA(amps)}</strong></div>
+      <div>${fmtW(totals[phase].watts)}</div>
+      <div>${statusText}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('printPhaseTables').innerHTML = phases.map(phase => {
+    const rows = plan.filter(item => item.phase === phase);
+    const body = rows.length ? rows.map(item => `<tr>
+      <td>${esc(item.brand ? item.brand + ' · ' + item.name : item.name)}</td>
+      <td>${esc(item.category || '-')}</td>
+      <td>${item.quantity}</td>
+      <td>${fmtW(item.total_w)}</td>
+      <td>${fmtA(item.total_a)}</td>
+    </tr>`).join('') : '<tr><td colspan="5">Keine Geräte auf dieser Phase.</td></tr>';
+
+    return `<div class="print-phase-block">
+      <h3>${phase} · ${fmtA(totals[phase].amps)} · ${fmtW(totals[phase].watts)}</h3>
+      <table class="print-table">
+        <thead><tr><th>Gerät</th><th>Kategorie</th><th>Anzahl</th><th>Leistung</th><th>Strom</th></tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>`;
+  }).join('');
+
+  document.getElementById('printRows').innerHTML = plan.length ? plan.map(item => `<tr>
+    <td>${esc(item.name)}</td>
+    <td>${esc(item.brand || '-')}</td>
+    <td>${esc(item.category || '-')}</td>
+    <td>${item.quantity}</td>
+    <td>${item.phase}</td>
+    <td>${fmtW(item.total_w)}</td>
+    <td>${fmtA(item.total_a)}</td>
+  </tr>`).join('') : '<tr><td colspan="7">Noch keine Geräte im Plan.</td></tr>';
+}
+
+function exportPdf() {
+  renderPrintExport();
+  window.print();
+}
+
 function renderPlan() {
   const body = document.getElementById('planRows');
   if (!plan.length) {
@@ -174,6 +227,8 @@ document.getElementById('clearPlan').addEventListener('click', () => {
     renderPlan();
   }
 });
+
+document.getElementById('exportPdf').addEventListener('click', exportPdf);
 
 document.getElementById('exportJson').addEventListener('click', () => {
   const blob = new Blob([JSON.stringify({ exported_at: new Date().toISOString(), plan, totals: phaseTotals() }, null, 2)], { type: 'application/json' });
