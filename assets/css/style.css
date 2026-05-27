@@ -1,0 +1,12 @@
+:root { --app-bg: #f6f8fb; }
+body { background: var(--app-bg); }
+.navbar-brand { font-weight: 700; letter-spacing: .2px; }
+.card { border: 0; border-radius: 1rem; box-shadow: 0 8px 24px rgba(20, 30, 50, .08); }
+.phase-card { transition: transform .15s ease, box-shadow .15s ease; }
+.phase-card.warning { border-left: 6px solid #ffc107; }
+.phase-card.danger { border-left: 6px solid #dc3545; }
+.phase-value { font-size: 2rem; font-weight: 800; }
+.table td, .table th { vertical-align: middle; }
+.badge-soft { background: #eef2ff; color: #334155; }
+.small-muted { color: #64748b; font-size: .9rem; }
+.progress { height: .65rem; border-radius: 999px; }
