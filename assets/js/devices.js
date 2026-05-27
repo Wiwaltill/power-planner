@@ -12,11 +12,12 @@ async function loadDevices() {
 function renderDevices() {
   const rows = document.getElementById('deviceRows');
   if (!devices.length) {
-    rows.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">Noch keine Geräte angelegt.</td></tr>';
+    rows.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Noch keine Geräte angelegt.</td></tr>';
     return;
   }
   rows.innerHTML = devices.map(device => `<tr>
     <td><strong>${device.name}</strong><div class="small-muted">${device.category || '-'} ${device.notes ? ' · ' + device.notes : ''}</div></td>
+    <td>${device.brand || '-'}</td>
     <td>${Number(device.power_w).toLocaleString('de-DE')} W</td>
     <td>${amp(device).toFixed(2).replace('.', ',')} A</td>
     <td>${device.connector || '-'}</td>
@@ -38,6 +39,7 @@ function editDevice(id) {
   if (!d) return;
   document.getElementById('deviceId').value = d.id;
   document.getElementById('name').value = d.name;
+  document.getElementById('brand').value = d.brand || '';
   document.getElementById('category').value = d.category || '';
   document.getElementById('power').value = d.power_w;
   document.getElementById('voltage').value = d.voltage_v || 230;
@@ -59,6 +61,7 @@ document.getElementById('deviceForm').addEventListener('submit', async event => 
   const payload = {
     id,
     name: document.getElementById('name').value,
+    brand: document.getElementById('brand').value,
     category: document.getElementById('category').value,
     power_w: Number(document.getElementById('power').value),
     voltage_v: Number(document.getElementById('voltage').value || 230),
