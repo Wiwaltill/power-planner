@@ -8,12 +8,40 @@ const fmtA = value => `${value.toFixed(2).replace('.', ',')} A`;
 const calcAmp = (watts, voltage) => watts / voltage;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
 
+function deviceLabel(device) {
+  return `${device.brand ? device.brand + ' - ' : ''}${device.name} (${device.power_w} W)`;
+}
+
+function renderDeviceSelect() {
+  const select = document.getElementById('deviceSelect');
+  const search = document.getElementById('deviceSearch');
+  const info = document.getElementById('deviceSearchInfo');
+  const term = (search?.value || '').trim().toLowerCase();
+
+  const filteredDevices = devices.filter(device => {
+    const haystack = [device.name, device.brand, device.category, device.power_w].join(' ').toLowerCase();
+    return !term || haystack.includes(term);
+  });
+
+  if (!devices.length) {
+    select.innerHTML = '<option value="">Bitte zuerst Geräte anlegen</option>';
+    if (info) info.textContent = 'Keine Geräte vorhanden.';
+    return;
+  }
+
+  select.innerHTML = filteredDevices.length
+    ? filteredDevices.map(device => `<option value="${device.id}">${esc(deviceLabel(device))}</option>`).join('')
+    : '<option value="">Keine passenden Geräte gefunden</option>';
+
+  if (info) info.textContent = term
+    ? `${filteredDevices.length} von ${devices.length} Geräten gefunden.`
+    : 'Tippe zum Filtern der Geräteauswahl.';
+}
+
 async function loadDevices() {
   const response = await fetch('devices.php?api=1');
   devices = await response.json();
-  const select = document.getElementById('deviceSelect');
-  select.innerHTML = devices.map(device => `<option value="${device.id}">${device.brand ? device.brand + ' - ' : ''}${device.name} (${device.power_w} W)</option>`).join('');
-  if (!devices.length) select.innerHTML = '<option value="">Bitte zuerst Geräte anlegen</option>';
+  renderDeviceSelect();
 }
 
 function savePlan() {
@@ -121,6 +149,37 @@ function moveItemToPhase(id, phase) {
   renderPlan();
 }
 
+function recalculateItem(item) {
+  const device = devices.find(device => device.id === item.device_id);
+  const powerW = Number(device?.power_w || item.power_w || (Number(item.total_w || 0) / Math.max(Number(item.quantity || 1), 1)) || 0);
+  const quantity = Math.max(1, Number(item.quantity || 1));
+  const voltage = Math.max(1, Number(item.voltage_v || device?.voltage_v || 230));
+  item.power_w = powerW;
+  item.quantity = quantity;
+  item.voltage_v = voltage;
+  item.total_w = quantity * powerW;
+  item.total_a = calcAmp(item.total_w, voltage);
+}
+
+function updateItemQuantity(id, value) {
+  const item = plan.find(entry => entry.id === id);
+  if (!item) return;
+  item.quantity = Math.max(1, Number(value || 1));
+  recalculateItem(item);
+  savePlan();
+  renderPlan();
+}
+
+function updateItemRemarks(id, value) {
+  const item = plan.find(entry => entry.id === id);
+  if (!item) return;
+  item.remarks = String(value || '').trim();
+  savePlan();
+  renderPlan();
+}
+
+window.updateItemQuantity = updateItemQuantity;
+window.updateItemRemarks = updateItemRemarks;
 
 function renderPrintExport() {
   const totals = phaseTotals();
@@ -181,14 +240,14 @@ function renderPlan() {
     body.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">Noch keine Geräte im Plan.</td></tr>';
   } else {
     body.innerHTML = plan.map((item, index) => `<tr>
-      <td>${item.name}</td>
-      <td>${item.brand || '-'}</td>
-      <td>${item.category || '-'}</td>
-      <td>${item.quantity}</td>
+      <td>${esc(item.name)}</td>
+      <td>${esc(item.brand || '-')}</td>
+      <td>${esc(item.category || '-')}</td>
+      <td style="min-width: 95px;"><input type="number" class="form-control form-control-sm plan-quantity-input" min="1" value="${item.quantity}" onchange="updateItemQuantity('${item.id}', this.value)"></td>
       <td><span class="badge text-bg-dark">${item.phase}</span></td>
       <td>${fmtW(item.total_w)}</td>
       <td>${fmtA(item.total_a)}</td>
-      <td>${item.remarks ? esc(item.remarks) : '-'}</td>
+      <td style="min-width: 220px;"><textarea class="form-control form-control-sm plan-remarks-input" rows="1" placeholder="Bemerkung" onchange="updateItemRemarks('${item.id}', this.value)">${esc(item.remarks || '')}</textarea></td>
       <td class="text-end"><button class="btn btn-sm btn-outline-danger" onclick="removeItem(${index})">Entfernen</button></td>
     </tr>`).join('');
   }
@@ -219,6 +278,7 @@ document.getElementById('loadForm').addEventListener('submit', event => {
     phase: document.getElementById('phase').value,
     remarks: document.getElementById('remarks').value.trim(),
     voltage_v: voltage,
+    power_w: Number(device.power_w),
     total_w: totalW,
     total_a: calcAmp(totalW, voltage)
   });
@@ -241,7 +301,8 @@ function normalizeImportedPlan(importedPlan) {
   return importedPlan.map(item => {
     const quantity = Number(item.quantity || 1);
     const voltage = Number(item.voltage_v || 230);
-    const totalW = Number(item.total_w || (quantity * Number(item.power_w || 0)));
+    const powerW = Number(item.power_w || (Number(item.total_w || 0) / Math.max(quantity, 1)) || 0);
+    const totalW = Number(item.total_w || (quantity * powerW));
     return {
       id: item.id || crypto.randomUUID(),
       device_id: item.device_id || '',
@@ -252,6 +313,7 @@ function normalizeImportedPlan(importedPlan) {
       phase: phases.includes(item.phase) ? item.phase : 'L1',
       remarks: String(item.remarks || ''),
       voltage_v: voltage,
+      power_w: powerW,
       total_w: totalW,
       total_a: Number(item.total_a || calcAmp(totalW, voltage))
     };
@@ -282,6 +344,8 @@ function importJsonFile(file) {
 document.getElementById('exportPdf').addEventListener('click', exportPdf);
 document.getElementById('importJson').addEventListener('click', () => document.getElementById('importJsonFile').click());
 document.getElementById('importJsonFile').addEventListener('change', event => importJsonFile(event.target.files[0]));
+
+document.getElementById('deviceSearch').addEventListener('input', renderDeviceSelect);
 
 document.getElementById('exportJson').addEventListener('click', () => {
   const blob = new Blob([JSON.stringify({ exported_at: new Date().toISOString(), plan, totals: phaseTotals() }, null, 2)], { type: 'application/json' });
