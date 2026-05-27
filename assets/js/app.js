@@ -20,18 +20,37 @@ function findDeviceBySearchValue(value) {
   const cleanValue = String(value || '').trim().toLowerCase();
   if (!cleanValue) return null;
 
-  return devices.find(device => deviceLabel(device).toLowerCase() === cleanValue)
-    || devices.find(device => device.id === value)
+  return devices.find(device => device.id === value)
+    || devices.find(device => deviceLabel(device).toLowerCase() === cleanValue)
     || devices.find(device => getDeviceSearchText(device).toLowerCase().includes(cleanValue))
     || null;
 }
 
+function selectDevice(deviceId) {
+  const device = devices.find(device => device.id === deviceId);
+  if (!device) return;
+
+  document.getElementById('deviceSelect').value = device.id;
+  document.getElementById('deviceDropdownLabel').textContent = deviceLabel(device);
+  document.getElementById('deviceSearch').value = '';
+  renderDeviceSelect();
+
+  const dropdownButton = document.getElementById('deviceDropdownButton');
+  const dropdown = bootstrap.Dropdown.getOrCreateInstance(dropdownButton);
+  dropdown.hide();
+}
+window.selectDevice = selectDevice;
+
 function renderDeviceSelect() {
   const hiddenSelect = document.getElementById('deviceSelect');
   const search = document.getElementById('deviceSearch');
-  const datalist = document.getElementById('deviceOptions');
+  const options = document.getElementById('deviceOptions');
+  const label = document.getElementById('deviceDropdownLabel');
   const info = document.getElementById('deviceSearchInfo');
   const term = (search?.value || '').trim().toLowerCase();
+
+  const selectedDevice = devices.find(device => device.id === hiddenSelect.value);
+  if (label) label.textContent = selectedDevice ? deviceLabel(selectedDevice) : 'Gerät suchen oder auswählen...';
 
   const filteredDevices = devices.filter(device => {
     const haystack = getDeviceSearchText(device).toLowerCase();
@@ -39,22 +58,25 @@ function renderDeviceSelect() {
   });
 
   if (!devices.length) {
-    datalist.innerHTML = '';
+    options.innerHTML = '<div class="dropdown-item text-muted small">Keine Geräte vorhanden.</div>';
     hiddenSelect.value = '';
     if (info) info.textContent = 'Keine Geräte vorhanden.';
     return;
   }
 
-  datalist.innerHTML = filteredDevices
-    .map(device => `<option value="${esc(deviceLabel(device))}"></option>`)
-    .join('');
-
-  const selectedDevice = findDeviceBySearchValue(search.value);
-  hiddenSelect.value = selectedDevice ? selectedDevice.id : '';
+  options.innerHTML = filteredDevices.length
+    ? filteredDevices.map(device => {
+      const active = device.id === hiddenSelect.value ? ' active' : '';
+      return `<button type="button" class="list-group-item list-group-item-action device-option${active}" onclick="selectDevice('${esc(device.id)}')">
+        <span class="fw-semibold">${esc(device.brand ? device.brand + ' · ' + device.name : device.name)}</span>
+        <span class="small text-muted d-block">${esc(device.category || '-')} · ${esc(device.power_w)} W</span>
+      </button>`;
+    }).join('')
+    : '<div class="dropdown-item text-muted small">Kein Gerät gefunden.</div>';
 
   if (info) info.textContent = term
     ? `${filteredDevices.length} von ${devices.length} Geräten gefunden.`
-    : 'Direkt in diesem Feld suchen oder Gerät aus der Liste wählen.';
+    : 'Gerät per Bootstrap-Dropdown öffnen und direkt filtern.';
 }
 
 async function loadDevices() {
@@ -282,8 +304,8 @@ window.removeItem = removeItem;
 
 document.getElementById('loadForm').addEventListener('submit', event => {
   event.preventDefault();
-  const device = findDeviceBySearchValue(document.getElementById('deviceSearch').value)
-    || devices.find(d => d.id === document.getElementById('deviceSelect').value);
+  const device = devices.find(d => d.id === document.getElementById('deviceSelect').value)
+    || findDeviceBySearchValue(document.getElementById('deviceSearch').value);
   if (!device) {
     alert('Bitte ein gültiges Gerät aus der Auswahl wählen.');
     return;
@@ -308,6 +330,7 @@ document.getElementById('loadForm').addEventListener('submit', event => {
   document.getElementById('remarks').value = '';
   document.getElementById('deviceSearch').value = '';
   document.getElementById('deviceSelect').value = '';
+  document.getElementById('deviceDropdownLabel').textContent = 'Gerät suchen oder auswählen...';
   renderDeviceSelect();
   savePlan();
   renderPlan();
