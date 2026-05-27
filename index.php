@@ -23,10 +23,10 @@
 
 <main class="container py-4">
   <div class="row g-4">
-    <div class="col-lg-5">
-      <div class="card p-4">
+    <div class="col-lg-4">
+      <div class="card p-4 sticky-lg-top planner-form-card">
         <h1 class="h3 mb-1">Stromplan erstellen</h1>
-        <p class="small-muted mb-4">Wähle Gerät, Anzahl und Phase. Die Verteilung wird live berechnet.</p>
+        <p class="small-muted mb-4">Wähle Gerät, Anzahl und Startphase. Danach kannst du Geräte per Drag & Drop zwischen L1, L2 und L3 verschieben.</p>
 
         <form id="loadForm" class="row g-3">
           <div class="col-12">
@@ -53,11 +53,24 @@
             <button class="btn btn-primary w-100" type="submit">Zum Plan hinzufügen</button>
           </div>
         </form>
+
+        <hr class="my-4">
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-secondary btn-sm flex-fill" id="exportJson">JSON exportieren</button>
+          <button class="btn btn-outline-danger btn-sm flex-fill" id="clearPlan">Plan leeren</button>
+        </div>
       </div>
     </div>
 
-    <div class="col-lg-7">
-      <div class="row g-3" id="phaseSummary"></div>
+    <div class="col-lg-8">
+      <div class="d-flex flex-wrap gap-2 justify-content-between align-items-end mb-3">
+        <div>
+          <h2 class="h4 mb-0">Phasenplaner</h2>
+          <div class="small-muted">Ziehe angelegte Geräte in die gewünschte Phase.</div>
+        </div>
+        <span class="badge text-bg-light border">Richtwert je Phase: 16 A</span>
+      </div>
+      <div class="row g-3" id="phaseBoards"></div>
     </div>
   </div>
 
@@ -65,11 +78,7 @@
     <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
       <div>
         <h2 class="h4 mb-0">Aktueller Stromplan</h2>
-        <div class="small-muted">Alle Werte werden im Browser gespeichert.</div>
-      </div>
-      <div class="d-flex gap-2">
-        <button class="btn btn-outline-secondary btn-sm" id="exportJson">JSON exportieren</button>
-        <button class="btn btn-outline-danger btn-sm" id="clearPlan">Plan leeren</button>
+        <div class="small-muted">Tabellarische Übersicht. Verschieben erfolgt oben per Drag & Drop.</div>
       </div>
     </div>
     <div class="table-responsive">
