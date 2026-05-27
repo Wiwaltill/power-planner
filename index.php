@@ -57,6 +57,7 @@
         <hr class="my-4">
         <div class="d-flex gap-2">
           <button class="btn btn-outline-secondary btn-sm flex-fill" id="exportJson">JSON exportieren</button>
+          <button class="btn btn-outline-primary btn-sm flex-fill" id="exportPdf">PDF exportieren</button>
           <button class="btn btn-outline-danger btn-sm flex-fill" id="clearPlan">Plan leeren</button>
         </div>
       </div>
@@ -92,6 +93,33 @@
       </table>
     </div>
   </div>
+
+
+  <section id="printArea" class="print-area" aria-hidden="true">
+    <div class="print-header">
+      <div>
+        <h1>Stromplan Übersicht</h1>
+        <p id="printDate"></p>
+      </div>
+      <div class="print-meta">Richtwert je Phase: 16 A</div>
+    </div>
+
+    <h2>Phasenübersicht</h2>
+    <div id="printSummary" class="print-summary"></div>
+
+    <h2>Geräte nach Phase</h2>
+    <div id="printPhaseTables"></div>
+
+    <h2>Gesamtliste</h2>
+    <table class="print-table">
+      <thead>
+        <tr><th>Gerät</th><th>Marke</th><th>Kategorie</th><th>Anzahl</th><th>Phase</th><th>Leistung</th><th>Strom</th></tr>
+      </thead>
+      <tbody id="printRows"></tbody>
+    </table>
+
+    <p class="print-note">Hinweis: Die Berechnung basiert auf den im Plan eingetragenen Leistungs- und Spannungswerten und ersetzt keine elektrotechnische Prüfung.</p>
+  </section>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
