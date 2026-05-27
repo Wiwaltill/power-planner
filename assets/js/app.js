@@ -12,30 +12,49 @@ function deviceLabel(device) {
   return `${device.brand ? device.brand + ' - ' : ''}${device.name} (${device.power_w} W)`;
 }
 
+function getDeviceSearchText(device) {
+  return [deviceLabel(device), device.brand, device.name, device.category, device.power_w].filter(Boolean).join(' ');
+}
+
+function findDeviceBySearchValue(value) {
+  const cleanValue = String(value || '').trim().toLowerCase();
+  if (!cleanValue) return null;
+
+  return devices.find(device => deviceLabel(device).toLowerCase() === cleanValue)
+    || devices.find(device => device.id === value)
+    || devices.find(device => getDeviceSearchText(device).toLowerCase().includes(cleanValue))
+    || null;
+}
+
 function renderDeviceSelect() {
-  const select = document.getElementById('deviceSelect');
+  const hiddenSelect = document.getElementById('deviceSelect');
   const search = document.getElementById('deviceSearch');
+  const datalist = document.getElementById('deviceOptions');
   const info = document.getElementById('deviceSearchInfo');
   const term = (search?.value || '').trim().toLowerCase();
 
   const filteredDevices = devices.filter(device => {
-    const haystack = [device.name, device.brand, device.category, device.power_w].join(' ').toLowerCase();
+    const haystack = getDeviceSearchText(device).toLowerCase();
     return !term || haystack.includes(term);
   });
 
   if (!devices.length) {
-    select.innerHTML = '<option value="">Bitte zuerst Geräte anlegen</option>';
+    datalist.innerHTML = '';
+    hiddenSelect.value = '';
     if (info) info.textContent = 'Keine Geräte vorhanden.';
     return;
   }
 
-  select.innerHTML = filteredDevices.length
-    ? filteredDevices.map(device => `<option value="${device.id}">${esc(deviceLabel(device))}</option>`).join('')
-    : '<option value="">Keine passenden Geräte gefunden</option>';
+  datalist.innerHTML = filteredDevices
+    .map(device => `<option value="${esc(deviceLabel(device))}"></option>`)
+    .join('');
+
+  const selectedDevice = findDeviceBySearchValue(search.value);
+  hiddenSelect.value = selectedDevice ? selectedDevice.id : '';
 
   if (info) info.textContent = term
     ? `${filteredDevices.length} von ${devices.length} Geräten gefunden.`
-    : 'Tippe zum Filtern der Geräteauswahl.';
+    : 'Direkt in diesem Feld suchen oder Gerät aus der Liste wählen.';
 }
 
 async function loadDevices() {
@@ -263,8 +282,12 @@ window.removeItem = removeItem;
 
 document.getElementById('loadForm').addEventListener('submit', event => {
   event.preventDefault();
-  const device = devices.find(d => d.id === document.getElementById('deviceSelect').value);
-  if (!device) return;
+  const device = findDeviceBySearchValue(document.getElementById('deviceSearch').value)
+    || devices.find(d => d.id === document.getElementById('deviceSelect').value);
+  if (!device) {
+    alert('Bitte ein gültiges Gerät aus der Auswahl wählen.');
+    return;
+  }
   const quantity = Number(document.getElementById('quantity').value || 1);
   const voltage = Number(document.getElementById('voltage').value || device.voltage_v || 230);
   const totalW = quantity * Number(device.power_w);
@@ -283,6 +306,9 @@ document.getElementById('loadForm').addEventListener('submit', event => {
     total_a: calcAmp(totalW, voltage)
   });
   document.getElementById('remarks').value = '';
+  document.getElementById('deviceSearch').value = '';
+  document.getElementById('deviceSelect').value = '';
+  renderDeviceSelect();
   savePlan();
   renderPlan();
 });
