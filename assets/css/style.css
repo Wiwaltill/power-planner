@@ -65,3 +65,26 @@ body { background: var(--app-bg); }
 .app-footer a { color: inherit; text-decoration: none; font-weight: 600; }
 .app-footer a:hover { text-decoration: underline; }
 @media print { .app-footer { display: none !important; } }
+
+/* Erweiterungen */
+.plan-card, .phase-dropzone { touch-action: manipulation; }
+body.dark-mode { --app-bg: #0f172a; color: #e2e8f0; }
+body.dark-mode .card,
+body.dark-mode .app-footer,
+body.dark-mode .dropdown-menu { background: #111827; color: #e5e7eb; }
+body.dark-mode .table { --bs-table-color: #e5e7eb; --bs-table-bg: transparent; --bs-table-hover-color: #fff; --bs-table-hover-bg: rgba(255,255,255,.06); }
+body.dark-mode .form-control,
+body.dark-mode .form-select { background: #0b1220; border-color: #334155; color: #e5e7eb; }
+body.dark-mode .small-muted,
+body.dark-mode .text-muted { color: #94a3b8 !important; }
+body.dark-mode .phase-board-header,
+body.dark-mode .empty-phase,
+body.dark-mode .plan-remarks { background: #0b1220; }
+body.dark-mode .plan-card { background: #0b1220; border-color: #334155; color: #e5e7eb; }
+body.dark-mode .badge-soft { background: #1e293b; color: #cbd5e1; }
+body.dark-mode .btn-outline-dark { color: #e5e7eb; border-color: #64748b; }
+body.dark-mode .btn-outline-dark:hover { background: #334155; }
+
+@media print {
+  .print-header { min-height: 28mm; background-repeat: no-repeat; background-size: auto 18mm; background-position: right top; }
+}
