@@ -46,3 +46,7 @@ body { background: var(--app-bg); }
   .print-table th, .print-table td { border: 1px solid #333; padding: .16rem .24rem; vertical-align: top; line-height: 1.2; }
   .print-table th { background: #efefef !important; font-weight: 700; }
 }
+@media print {
+  .print-title-wrap { display: flex; align-items: flex-start; gap: .6rem; }
+  .print-logo { max-height: 42px; max-width: 130px; object-fit: contain; }
+}

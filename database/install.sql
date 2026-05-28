@@ -30,7 +30,6 @@ CREATE TABLE IF NOT EXISTS projects (
   name VARCHAR(190) NOT NULL,
   client VARCHAR(190) DEFAULT '',
   technician VARCHAR(190) DEFAULT '',
-  logo_url VARCHAR(500) DEFAULT '',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_projects_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -98,4 +97,11 @@ CREATE TABLE IF NOT EXISTS device_connectors (
   UNIQUE KEY uniq_device_connector_user_name (user_id, name),
   CONSTRAINT fk_device_connector_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   INDEX idx_device_connector_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE IF NOT EXISTS app_settings (
+  setting_key VARCHAR(100) NOT NULL PRIMARY KEY,
+  setting_value TEXT NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
