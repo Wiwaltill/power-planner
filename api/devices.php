@@ -26,10 +26,12 @@ if ($method === 'POST') {
     if (!$payload[0]) json_response(['error'=>'Name fehlt.'], 422);
     if ($id) {
         $stmt = $pdo->prepare('UPDATE devices SET name=?, brand=?, category=?, power_w=?, voltage_v=?, connector=?, notes=? WHERE id=? AND user_id=?');
-        $stmt->execute([...$payload, $id, $user['id']]);
+        $params = array_merge($payload, [$id, $user['id']]);
+        $stmt->execute($params);
     } else {
         $stmt = $pdo->prepare('INSERT INTO devices (user_id,name,brand,category,power_w,voltage_v,connector,notes) VALUES (?,?,?,?,?,?,?,?)');
-        $stmt->execute([$user['id'], ...$payload]); $id = (int)$pdo->lastInsertId();
+        $params = array_merge([$user['id']], $payload);
+        $stmt->execute($params); $id = (int)$pdo->lastInsertId();
     }
     json_response(['id'=>$id]);
 }
