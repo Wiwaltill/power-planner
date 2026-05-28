@@ -4,6 +4,7 @@ require_once __DIR__ . '/helpers.php';
 $pageTitle = $pageTitle ?? APP_NAME;
 $activePage = $activePage ?? '';
 $user = current_user();
+$companyLogo = setting_get('company_logo');
 function nav_active(string $page, string $active): string { return $page === $active ? ' active' : ''; }
 $basePath = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '')), '/');
 if ($basePath === '') { $basePath = ''; }
@@ -25,7 +26,7 @@ function app_url(string $path = ''): string {
 <body class="d-flex flex-column min-vh-100">
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
   <div class="container">
-    <a class="navbar-brand" href="<?= e(app_url('projects')) ?>">⚡ <?= e(APP_NAME) ?></a>
+    <a class="navbar-brand" href="<?= e(app_url('projects')) ?>"><?php if ($companyLogo): ?><img class="header-logo" src="<?= e(app_url($companyLogo)) ?>" alt="Firmenlogo"><?php endif; ?><span>⚡ <?= e(APP_NAME) ?></span></a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav"><span class="navbar-toggler-icon"></span></button>
     <div class="collapse navbar-collapse" id="nav">
       <ul class="navbar-nav ms-auto">
