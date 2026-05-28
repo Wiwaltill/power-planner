@@ -1,7 +1,7 @@
 :root { --app-bg: #f6f8fb; }
 body { background: var(--app-bg); }
-.navbar-brand { font-weight: 700; letter-spacing: .2px; display: inline-flex; align-items: center; gap: .45rem; }
-.header-logo { display: inline-block; width: auto; height:32px; max-width: 90px; object-fit: contain; background: #fff; border-radius: .35rem; padding: .1rem; }
+.navbar-brand { font-weight: 700; letter-spacing: .2px; display: inline-flex; align-items: center; gap: .45rem; line-height: 1; }
+.header-logo { display: inline-block; width: auto; height: 22px; max-width: 64px; object-fit: contain; background: transparent; border-radius: 0; padding: 0; flex: 0 0 auto; }
 @media print { .header-logo { display: none !important; } }
 .card { border: 0; border-radius: 1rem; box-shadow: 0 8px 24px rgba(20, 30, 50, .08); }
 .table td, .table th { vertical-align: middle; }
@@ -9,25 +9,26 @@ body { background: var(--app-bg); }
 .small-muted { color: #64748b; font-size: .9rem; }
 .progress { height: .65rem; border-radius: 999px; }
 .planner-form-card { top: 1rem; z-index: 1; }
-.phase-dropzone { min-height:32px; overflow: hidden; transition: transform .15s ease, box-shadow .15s ease, outline-color .15s ease; }
+.phase-dropzone { min-height: 560px; overflow: hidden; transition: transform .15s ease, box-shadow .15s ease, outline-color .15s ease; }
 .phase-dropzone.warning { border-left: 6px solid #ffc107; }
 .phase-dropzone.danger { border-left: 6px solid #dc3545; }
 .phase-dropzone.drag-over { outline: 3px dashed #0d6efd; outline-offset: -10px; transform: translateY(-2px); box-shadow: 0 12px 30px rgba(13, 110, 253, .18); }
 .phase-board-header { background: rgba(248, 250, 252, .8); }
-.phase-items { min-height:32px; display: flex; flex-direction: column; gap: .75rem; }
+.phase-items { min-height: 390px; display: flex; flex-direction: column; gap: .75rem; }
 .phase-value { font-size: 2rem; font-weight: 800; }
 .plan-card { border: 1px solid #e2e8f0; border-radius: .85rem; background: #fff; padding: .85rem; cursor: grab; box-shadow: 0 6px 16px rgba(15, 23, 42, .06); transition: transform .15s ease, opacity .15s ease, box-shadow .15s ease; touch-action: manipulation; }
 .plan-card:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(15, 23, 42, .1); }
 .plan-card.dragging { opacity: .45; cursor: grabbing; }
-.empty-phase { min-height:32px; border: 2px dashed #cbd5e1; border-radius: .85rem; color: #64748b; display: flex; align-items: center; justify-content: center; text-align: center; padding: 1rem; background: #f8fafc; }
+.empty-phase { min-height: 120px; border: 2px dashed #cbd5e1; border-radius: .85rem; color: #64748b; display: flex; align-items: center; justify-content: center; text-align: center; padding: 1rem; background: #f8fafc; }
 .plan-remarks { font-size: .82rem; color: #334155; background: #f8fafc; border-left: 3px solid #cbd5e1; padding: .25rem .4rem; border-radius: .35rem; }
 .plan-quantity-input { max-width: 80px; }
 .plan-remarks-input { min-width: 200px; resize: vertical; }
 .device-dropdown .dropdown-toggle::after { margin-left: .75rem; }
-.device-dropdown-menu { max-height:32px; overflow: hidden; }
-.device-options { max-height:32px; overflow-y: auto; }
+.device-dropdown-menu { max-height: 360px; overflow: hidden; min-width: 100%; }
+.device-options { max-height: 285px; overflow-y: auto; }
 .device-option { border-left: 0; border-right: 0; }
-#deviceDropdownLabel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; max-width: 95%; }
+#deviceDropdownLabel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; max-width: calc(100% - 1.5rem); }
+.device-dropdown .dropdown-toggle { min-height: 38px; display: flex; align-items: center; justify-content: space-between; }
 .app-footer { background: #fff; border-top: 1px solid #e2e8f0; }
 .app-footer a { color: inherit; text-decoration: none; font-weight: 600; }
 .app-footer a:hover { text-decoration: underline; }
