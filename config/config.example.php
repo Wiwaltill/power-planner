@@ -1,5 +1,5 @@
 <?php
-// Datei nach config.php kopieren und Zugangsdaten eintragen.
+// Wird normalerweise automatisch über /install erzeugt.
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'stromplaner');
 define('DB_USER', 'root');

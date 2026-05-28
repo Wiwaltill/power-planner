@@ -6,7 +6,7 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
-    $stmt = db()->prepare('SELECT * FROM users WHERE email = ?');
+    $stmt = db()->prepare('SELECT * FROM users WHERE email = ? AND active = 1');
     $stmt->execute([$email]);
     $user = $stmt->fetch();
     if ($user && password_verify($password, $user['password_hash'])) {
@@ -25,6 +25,6 @@ $pageTitle = 'Login'; $activePage = 'login'; require __DIR__ . '/inc/header.php'
   <div class="col-12"><label class="form-label">Passwort</label><input class="form-control" type="password" name="password" required></div>
   <div class="col-12"><button class="btn btn-primary w-100">Einloggen</button></div>
 </form>
-<p class="small-muted mt-3 mb-0">Noch kein Konto? <a href="register">Registrieren</a></p>
+<p class="small-muted mt-3 mb-0">Zugänge werden durch einen Administrator angelegt.</p>
 </div></div></div></main>
 <?php require __DIR__ . '/inc/footer.php'; ?>

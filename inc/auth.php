@@ -5,7 +5,7 @@ function current_user(): ?array {
     if (empty($_SESSION['user_id'])) return null;
     static $user = null;
     if ($user === null) {
-        $stmt = db()->prepare('SELECT id, name, email FROM users WHERE id = ?');
+        $stmt = db()->prepare('SELECT id, name, email, role FROM users WHERE id = ?');
         $stmt->execute([$_SESSION['user_id']]);
         $user = $stmt->fetch() ?: null;
     }
@@ -15,6 +15,15 @@ function require_login(): array {
     $user = current_user();
     if (!$user) {
         header('Location: login');
+        exit;
+    }
+    return $user;
+}
+function require_admin(): array {
+    $user = require_login();
+    if (($user['role'] ?? '') !== 'admin') {
+        http_response_code(403);
+        echo 'Zugriff verweigert.';
         exit;
     }
     return $user;

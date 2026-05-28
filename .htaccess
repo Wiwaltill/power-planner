@@ -5,3 +5,7 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME}.php -f
 RewriteRule ^(.+?)/?$ $1.php [L,QSA]
 DirectoryIndex index.php
+
+<FilesMatch "^(config\.php|installed\.lock)$">
+  Require all denied
+</FilesMatch>
