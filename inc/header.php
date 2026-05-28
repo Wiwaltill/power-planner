@@ -25,6 +25,7 @@ function nav_active(string $page, string $active): string { return $page === $ac
         <?php if ($user): ?>
           <li class="nav-item"><a class="nav-link<?= nav_active('projects', $activePage) ?>" href="projects">Projekte</a></li>
           <li class="nav-item"><a class="nav-link<?= nav_active('devices', $activePage) ?>" href="devices">Geräte</a></li>
+          <li class="nav-item"><a class="nav-link<?= nav_active('settings', $activePage) ?>" href="settings">Einstellungen</a></li>
           <?php if (($user['role'] ?? '') === 'admin'): ?><li class="nav-item"><a class="nav-link<?= nav_active('users', $activePage) ?>" href="users">Nutzer</a></li><?php endif; ?>
           <li class="nav-item"><span class="nav-link disabled"><?= e($user['name']) ?></span></li>
           <li class="nav-item"><a class="nav-link" href="logout">Logout</a></li>

@@ -1,20 +1,117 @@
 const apiUrl = 'api/devices.php';
+const settingsUrl = 'api/settings.php';
 let devices = [];
+let deviceSettings = {brands: [], categories: []};
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+const byId = id => document.getElementById(id);
 const amp = d => Number(d.power_w || 0) / Number(d.voltage_v || 230);
-async function loadDevices(){ const r = await fetch(apiUrl); devices = await r.json(); renderDevices(); }
-function renderDevices(){
-  const rows = document.getElementById('deviceRows');
-  rows.innerHTML = devices.length ? devices.map(d => `<tr><td><strong>${esc(d.name)}</strong><div class="small-muted">${esc(d.category || '-')} ${d.notes ? ' · '+esc(d.notes) : ''}</div></td><td>${esc(d.brand || '-')}</td><td>${Number(d.power_w).toLocaleString('de-DE')} W</td><td>${amp(d).toFixed(2).replace('.', ',')} A</td><td>${esc(d.connector || '-')}</td><td class="text-end"><button class="btn btn-sm btn-outline-secondary me-1" onclick="editDevice(${d.id})">Bearbeiten</button><button class="btn btn-sm btn-outline-danger" onclick="deleteDevice(${d.id})">Löschen</button></td></tr>`).join('') : '<tr><td colspan="6" class="text-center text-muted py-4">Noch keine Geräte angelegt.</td></tr>';
+
+async function fetchJson(url, opts = {}) {
+  const r = await fetch(url, {credentials:'same-origin', ...opts});
+  const text = await r.text();
+  let data = {};
+  try { data = text ? JSON.parse(text) : {}; } catch(e) { throw new Error('Ungültige Serverantwort: ' + text.slice(0,160)); }
+  if (!r.ok) throw new Error(data.error || 'Serverfehler');
+  return data;
 }
-function resetForm(){ document.getElementById('deviceForm').reset(); document.getElementById('deviceId').value=''; document.getElementById('voltage').value=230; }
-function editDevice(id){ const d=devices.find(x=>Number(x.id)===Number(id)); if(!d)return; deviceId.value=d.id; name.value=d.name; brand.value=d.brand||''; category.value=d.category||''; power.value=d.power_w; voltage.value=d.voltage_v||230; connector.value=d.connector||''; notes.value=d.notes||''; }
+
+async function loadSettings() {
+  deviceSettings = await fetchJson(settingsUrl);
+  renderSelect('brand', deviceSettings.brands || [], 'Marke auswählen');
+  renderSelect('category', deviceSettings.categories || [], 'Kategorie auswählen');
+}
+
+function renderSelect(id, rows, placeholder) {
+  const el = byId(id);
+  const current = el.value;
+  el.innerHTML = `<option value="">${esc(placeholder)}</option>` + rows.map(r => `<option value="${esc(r.name)}">${esc(r.name)}</option>`).join('');
+  if (current && [...el.options].some(o => o.value === current)) el.value = current;
+}
+
+async function loadDevices(){
+  devices = await fetchJson(apiUrl);
+  renderDevices();
+}
+
+function renderDevices(){
+  const rows = byId('deviceRows');
+  rows.innerHTML = devices.length ? devices.map(d => `<tr><td><strong>${esc(d.name)}</strong><div class="small-muted">${esc(d.category || '-')} ${d.notes ? ' · '+esc(d.notes) : ''}</div></td><td>${esc(d.brand || '-')}</td><td>${Number(d.power_w || 0).toLocaleString('de-DE')} W</td><td>${amp(d).toFixed(2).replace('.', ',')} A</td><td>${esc(d.connector || '-')}</td><td class="text-end"><button class="btn btn-sm btn-outline-secondary me-1" onclick="editDevice(${Number(d.id)})">Bearbeiten</button><button class="btn btn-sm btn-outline-danger" onclick="deleteDevice(${Number(d.id)})">Löschen</button></td></tr>`).join('') : '<tr><td colspan="6" class="text-center text-muted py-4">Noch keine Geräte angelegt.</td></tr>';
+}
+
+function resetForm(){
+  byId('deviceForm').reset();
+  byId('deviceId').value='';
+  byId('voltage').value=230;
+}
+
+function editDevice(id){
+  const d=devices.find(x=>Number(x.id)===Number(id));
+  if(!d) return;
+  byId('deviceId').value=d.id;
+  byId('name').value=d.name || '';
+  ensureOption(byId('brand'), d.brand || '');
+  ensureOption(byId('category'), d.category || '');
+  byId('brand').value=d.brand || '';
+  byId('category').value=d.category || '';
+  byId('power').value=d.power_w || 0;
+  byId('voltage').value=d.voltage_v || 230;
+  byId('connector').value=d.connector || '';
+  byId('notes').value=d.notes || '';
+}
 window.editDevice = editDevice;
-async function deleteDevice(id){ if(!confirm('Gerät wirklich löschen?')) return; await fetch(`${apiUrl}?id=${id}`,{method:'DELETE'}); await loadDevices(); }
+
+function ensureOption(select, value) {
+  if (!value) return;
+  if (![...select.options].some(o => o.value === value)) {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = value + ' (nicht in Einstellungen)';
+    select.appendChild(option);
+  }
+}
+
+async function deleteDevice(id){
+  if(!confirm('Gerät wirklich löschen?')) return;
+  try { await fetchJson(`${apiUrl}?id=${id}`,{method:'DELETE'}); await loadDevices(); }
+  catch(err) { alert(err.message); }
+}
 window.deleteDevice = deleteDevice;
-document.getElementById('deviceForm').addEventListener('submit', async e => { e.preventDefault(); const payload={id:deviceId.value||0,name:name.value,brand:brand.value,category:category.value,power_w:Number(power.value),voltage_v:Number(voltage.value||230),connector:connector.value,notes:notes.value}; const r=await fetch(apiUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); if(!r.ok){ const err=await r.json(); alert(err.error||'Speichern fehlgeschlagen.'); return;} resetForm(); await loadDevices(); });
-document.getElementById('resetForm').addEventListener('click', resetForm);
-document.getElementById('exportDevices').addEventListener('click', () => { location.href = `${apiUrl}?export=1`; });
-document.getElementById('importDevices').addEventListener('click', () => importDevicesFile.click());
-document.getElementById('importDevicesFile').addEventListener('change', async e => { const f=e.target.files[0]; if(!f)return; try{ const json=JSON.parse(await f.text()); const r=await fetch(`${apiUrl}?import=1`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(json)}); const result=await r.json(); if(!r.ok) throw new Error(result.error||'Import fehlgeschlagen.'); await loadDevices(); alert(`${result.imported} Gerät(e) importiert.`);}catch(err){alert(err.message||'Import fehlgeschlagen.');} finally{e.target.value='';} });
-loadDevices();
+
+byId('deviceForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const payload={
+    id: Number(byId('deviceId').value || 0),
+    name: byId('name').value,
+    brand: byId('brand').value,
+    category: byId('category').value,
+    power_w: Number(byId('power').value || 0),
+    voltage_v: Number(byId('voltage').value || 230),
+    connector: byId('connector').value,
+    notes: byId('notes').value
+  };
+  try {
+    await fetchJson(apiUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    resetForm();
+    await loadDevices();
+  } catch(err) { alert('Gerät konnte nicht gespeichert werden: ' + err.message); }
+});
+
+byId('resetForm').addEventListener('click', resetForm);
+byId('exportDevices').addEventListener('click', () => { location.href = `${apiUrl}?export=1`; });
+byId('importDevices').addEventListener('click', () => byId('importDevicesFile').click());
+byId('importDevicesFile').addEventListener('change', async e => {
+  const f=e.target.files[0];
+  if(!f) return;
+  try{
+    const json=JSON.parse(await f.text());
+    const result=await fetchJson(`${apiUrl}?import=1`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(json)});
+    await loadDevices();
+    alert(`${result.imported} Gerät(e) importiert.`);
+  } catch(err){ alert(err.message || 'Import fehlgeschlagen.'); }
+  finally{ e.target.value=''; }
+});
+
+(async function init(){
+  try { await loadSettings(); await loadDevices(); }
+  catch(err) { alert(err.message); }
+})();

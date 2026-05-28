@@ -1,7 +1,9 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/migrations.php';
 function current_user(): ?array {
+    ensure_schema();
     if (empty($_SESSION['user_id'])) return null;
     static $user = null;
     if ($user === null) {

@@ -7,8 +7,8 @@ require_login(); $pageTitle = 'Geräte'; $activePage = 'devices'; $pageScript = 
     <div class="col-lg-4"><div class="card p-4 sticky-lg-top planner-form-card"><h1 class="h3">Gerät verwalten</h1><form id="deviceForm" class="row g-3">
       <input type="hidden" id="deviceId">
       <div class="col-12"><label class="form-label">Name</label><input class="form-control" id="name" required></div>
-      <div class="col-12"><label class="form-label">Marke</label><input class="form-control" id="brand"></div>
-      <div class="col-12"><label class="form-label">Kategorie</label><input class="form-control" id="category"></div>
+      <div class="col-12"><label class="form-label">Marke</label><select class="form-select" id="brand"></select></div>
+      <div class="col-12"><label class="form-label">Kategorie</label><select class="form-select" id="category"></select></div>
       <div class="col-md-6"><label class="form-label">Leistung W</label><input type="number" class="form-control" id="power" min="0" required></div>
       <div class="col-md-6"><label class="form-label">Spannung V</label><input type="number" class="form-control" id="voltage" value="230" min="1"></div>
       <div class="col-12"><label class="form-label">Anschluss</label><input class="form-control" id="connector"></div>

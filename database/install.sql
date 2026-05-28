@@ -1,4 +1,4 @@
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(120) NOT NULL,
   email VARCHAR(190) NOT NULL UNIQUE,
@@ -8,7 +8,7 @@ CREATE TABLE users (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE devices (
+CREATE TABLE IF NOT EXISTS devices (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id INT UNSIGNED NOT NULL,
   name VARCHAR(190) NOT NULL,
@@ -24,7 +24,7 @@ CREATE TABLE devices (
   INDEX idx_devices_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE projects (
+CREATE TABLE IF NOT EXISTS projects (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id INT UNSIGNED NOT NULL,
   name VARCHAR(190) NOT NULL,
@@ -37,7 +37,7 @@ CREATE TABLE projects (
   INDEX idx_projects_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE circuits (
+CREATE TABLE IF NOT EXISTS circuits (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   project_id INT UNSIGNED NOT NULL,
   name VARCHAR(190) NOT NULL,
@@ -47,7 +47,7 @@ CREATE TABLE circuits (
   INDEX idx_circuits_project (project_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE plan_items (
+CREATE TABLE IF NOT EXISTS plan_items (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   project_id INT UNSIGNED NOT NULL,
   circuit_id INT UNSIGNED NOT NULL,
@@ -67,4 +67,24 @@ CREATE TABLE plan_items (
   CONSTRAINT fk_items_device FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE SET NULL,
   INDEX idx_items_project (project_id),
   INDEX idx_items_circuit (circuit_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS device_brands (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  name VARCHAR(190) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_device_brand_user_name (user_id, name),
+  CONSTRAINT fk_device_brand_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_device_brand_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS device_categories (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  name VARCHAR(190) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_device_category_user_name (user_id, name),
+  CONSTRAINT fk_device_category_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_device_category_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
