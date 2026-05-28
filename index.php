@@ -7,7 +7,7 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="assets/css/style.css" rel="stylesheet">
 </head>
-<body>
+<body class="d-flex flex-column min-vh-100">
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
   <div class="container">
     <a class="navbar-brand" href="./">⚡ Stromplaner</a>
@@ -21,7 +21,7 @@
   </div>
 </nav>
 
-<main class="container py-4">
+<main class="container py-4 flex-grow-1">
   <div class="row g-4">
     <div class="col-lg-4">
       <div class="card p-4 sticky-lg-top planner-form-card">
@@ -137,6 +137,12 @@
     <p class="print-note">Hinweis: Die Berechnung basiert auf den im Plan eingetragenen Leistungs- und Spannungswerten und ersetzt keine elektrotechnische Prüfung.</p>
   </section>
 </main>
+
+<footer class="app-footer mt-auto py-3">
+  <div class="container small text-center text-muted">
+    © <?= date('Y') ?> Stromplaner · <a href="https://github.com/" target="_blank" rel="noopener noreferrer">GitHub</a>
+  </div>
+</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="assets/js/app.js"></script>

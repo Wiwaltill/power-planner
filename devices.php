@@ -147,7 +147,7 @@ if (isset($_GET['api'])) {
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="assets/css/style.css" rel="stylesheet">
 </head>
-<body>
+<body class="d-flex flex-column min-vh-100">
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
   <div class="container">
     <a class="navbar-brand" href="./">⚡ Stromplaner</a>
@@ -161,7 +161,7 @@ if (isset($_GET['api'])) {
   </div>
 </nav>
 
-<main class="container py-4">
+<main class="container py-4 flex-grow-1">
   <div class="row g-4">
     <div class="col-lg-5">
       <div class="card p-4">
