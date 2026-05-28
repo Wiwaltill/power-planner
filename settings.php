@@ -48,7 +48,7 @@ require __DIR__ . '/inc/header.php';
         <p class="small text-muted mb-3">Dieses Logo wird zentral gespeichert und im PDF-Export angezeigt.</p>
         <?php if ($currentLogo): ?>
           <div class="mb-3">
-            <img src="<?= e(app_url($currentLogo)) ?>" alt="Firmenlogo" style="max-height:80px;max-width:260px" class="border rounded p-2 bg-white">
+            <img src="<?= e(app_url($currentLogo)) ?>" alt="Firmenlogo" style="max-height:32px;max-width:260px" class="border rounded p-2 bg-white">
           </div>
         <?php else: ?>
           <p class="text-muted">Noch kein Firmenlogo hinterlegt.</p>

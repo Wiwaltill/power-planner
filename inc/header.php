@@ -26,7 +26,7 @@ function app_url(string $path = ''): string {
 <body class="d-flex flex-column min-vh-100">
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
   <div class="container">
-    <a class="navbar-brand" href="<?= e(app_url('projects')) ?>"><?php if ($companyLogo): ?><img class="header-logo" src="<?= e(app_url($companyLogo)) ?>" alt="Firmenlogo"><?php endif; ?><span>⚡ <?= e(APP_NAME) ?></span></a>
+    <a class="navbar-brand d-flex align-items-center gap-2" href="<?= e(app_url('projects')) ?>"><?php if ($companyLogo): ?><img class="header-logo" src="<?= e(app_url($companyLogo)) ?>" alt="Firmenlogo"><?php endif; ?><span>⚡ <?= e(APP_NAME) ?></span></a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav"><span class="navbar-toggler-icon"></span></button>
     <div class="collapse navbar-collapse" id="nav">
       <ul class="navbar-nav ms-auto">
