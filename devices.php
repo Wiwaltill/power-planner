@@ -11,7 +11,7 @@ require_login(); $pageTitle = 'Geräte'; $activePage = 'devices'; $pageScript = 
       <div class="col-12"><label class="form-label">Kategorie</label><select class="form-select" id="category"></select></div>
       <div class="col-md-6"><label class="form-label">Leistung W</label><input type="number" class="form-control" id="power" min="0" required></div>
       <div class="col-md-6"><label class="form-label">Spannung V</label><input type="number" class="form-control" id="voltage" value="230" min="1"></div>
-      <div class="col-12"><label class="form-label">Anschluss</label><input class="form-control" id="connector"></div>
+      <div class="col-12"><label class="form-label">Anschluss</label><select class="form-select" id="connector"></select></div>
       <div class="col-12"><label class="form-label">Notizen</label><textarea class="form-control" id="notes" rows="2"></textarea></div>
       <div class="col-12 d-flex gap-2"><button class="btn btn-primary flex-fill">Speichern</button><button class="btn btn-outline-secondary" id="resetForm" type="button">Neu</button></div>
     </form><hr><div class="d-flex gap-2"><button class="btn btn-outline-secondary btn-sm flex-fill" id="exportDevices" type="button">Export</button><button class="btn btn-outline-success btn-sm flex-fill" id="importDevices" type="button">Import</button><input class="d-none" id="importDevicesFile" type="file" accept=".json,application/json"></div></div></div>

@@ -32,6 +32,16 @@ function ensure_schema(): void {
         INDEX idx_device_category_user (user_id),
         CONSTRAINT fk_device_category_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS device_connectors (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        user_id INT UNSIGNED NOT NULL,
+        name VARCHAR(190) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uniq_device_connector_user_name (user_id, name),
+        INDEX idx_device_connector_user (user_id),
+        CONSTRAINT fk_device_connector_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     if (table_exists($pdo, 'devices')) {
         $cols = [
             'brand' => "ALTER TABLE devices ADD brand VARCHAR(190) DEFAULT ''",

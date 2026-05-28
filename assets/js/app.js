@@ -6,10 +6,11 @@ const fmtW = v => `${Math.round(Number(v||0)).toLocaleString('de-DE')} W`;
 const fmtA = v => `${Number(v||0).toFixed(2).replace('.', ',')} A`;
 const itemWatts = i => Number(i.power_w||0) * Number(i.quantity||1);
 const itemAmps = i => itemWatts(i) / Number(i.voltage_v||230);
+const apiBase = (window.APP_BASE_PATH || '') + '/api';
 const api = {
-  devices:'api/devices.php',
-  circuits:`api/circuits.php?project_id=${projectId}`,
-  items:`api/plan-items.php?project_id=${projectId}`
+  devices: apiBase + '/devices',
+  circuits: `${apiBase}/circuits?project_id=${projectId}`,
+  items: `${apiBase}/plan-items?project_id=${projectId}`
 };
 const $ = id => document.getElementById(id);
 const els = {

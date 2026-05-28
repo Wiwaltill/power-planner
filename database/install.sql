@@ -88,3 +88,14 @@ CREATE TABLE IF NOT EXISTS device_categories (
   CONSTRAINT fk_device_category_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   INDEX idx_device_category_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE IF NOT EXISTS device_connectors (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  name VARCHAR(190) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_device_connector_user_name (user_id, name),
+  CONSTRAINT fk_device_connector_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_device_connector_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

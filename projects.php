@@ -27,7 +27,7 @@ $pageTitle = 'Projekte'; $activePage = 'projects'; require __DIR__ . '/inc/heade
     <div class="col-lg-8"><div class="card p-4"><h2 class="h4 mb-3">Meine Projekte</h2>
       <?php if (!$projects): ?><p class="text-muted">Noch keine Projekte vorhanden.</p><?php endif; ?>
       <div class="list-group list-group-flush">
-        <?php foreach ($projects as $p): ?><a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="project?id=<?= (int)$p['id'] ?>">
+        <?php foreach ($projects as $p): ?><a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="<?= e(app_url('project')) ?>?id=<?= (int)$p['id'] ?>">
           <span><strong><?= e($p['name']) ?></strong><span class="small-muted d-block"><?= e($p['client'] ?: 'Kein Kunde') ?> · <?= (int)$p['circuits'] ?> Stromkreis(e) · <?= (int)$p['items'] ?> Position(en)</span></span>
           <span class="badge text-bg-light border">Öffnen</span>
         </a><?php endforeach; ?>

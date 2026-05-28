@@ -10,7 +10,7 @@ $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageSc
 <main class="container py-4 flex-grow-1">
   <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-4">
     <div><h1 class="h3 mb-1"><?= e($project['name']) ?></h1><div class="small-muted"><?= e($project['client'] ?: 'Kein Kunde') ?> · <?= e($project['technician'] ?: 'Kein Techniker') ?></div></div>
-    <a href="projects" class="btn btn-outline-secondary">Zur Projektliste</a>
+    <a href="<?= e(app_url('projects')) ?>" class="btn btn-outline-secondary">Zur Projektliste</a>
   </div>
   <div class="card p-3 p-md-4 mb-4">
     <div class="row g-3 align-items-end">

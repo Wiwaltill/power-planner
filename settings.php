@@ -10,7 +10,7 @@ require __DIR__ . '/inc/header.php';
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
       <h1 class="h3 mb-1">Einstellungen</h1>
-      <div class="small-muted">Marken und Kategorien für die Geräteverwaltung pflegen.</div>
+      <div class="small-muted">Marken, Kategorien und Anschlüsse für die Geräteverwaltung pflegen.</div>
     </div>
   </div>
   <div class="row g-4">
@@ -34,10 +34,20 @@ require __DIR__ . '/inc/header.php';
         <div id="categoryRows" class="list-group"></div>
       </div>
     </div>
+    <div class="col-lg-6">
+      <div class="card p-4">
+        <h2 class="h4">Anschlüsse</h2>
+        <form class="input-group mb-3" data-form="connectors">
+          <input class="form-control" placeholder="Neuer Anschluss" required>
+          <button class="btn btn-primary">Hinzufügen</button>
+        </form>
+        <div id="connectorRows" class="list-group"></div>
+      </div>
+    </div>
   </div>
 </main>
 <script>
-const apiSettings = 'api/settings.php';
+const apiSettings = (window.APP_BASE_PATH || '') + '/api/settings';
 const escSettings = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 async function settingsJson(url, opts={}) {
   const r = await fetch(url, {credentials:'same-origin', ...opts});
@@ -51,6 +61,7 @@ async function loadSettings() {
   const data = await settingsJson(apiSettings);
   renderSettings('brands', data.brands || [], document.getElementById('brandRows'));
   renderSettings('categories', data.categories || [], document.getElementById('categoryRows'));
+  renderSettings('connectors', data.connectors || [], document.getElementById('connectorRows'));
 }
 function renderSettings(type, rows, el) {
   el.innerHTML = rows.length ? rows.map(row => `<div class="list-group-item d-flex gap-2 align-items-center"><input class="form-control form-control-sm" value="${escSettings(row.name)}" data-id="${row.id}" data-type="${type}"><button class="btn btn-sm btn-outline-secondary" onclick="saveSetting('${type}', ${row.id}, this)">Speichern</button><button class="btn btn-sm btn-outline-danger" onclick="deleteSetting('${type}', ${row.id})">Löschen</button></div>`).join('') : '<div class="text-muted small">Noch keine Einträge.</div>';

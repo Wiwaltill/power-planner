@@ -6,7 +6,7 @@ ensure_schema();
 $pdo = db();
 $method = $_SERVER['REQUEST_METHOD'];
 $type = $_GET['type'] ?? 'all';
-$tables = ['brands' => 'device_brands', 'categories' => 'device_categories'];
+$tables = ['brands' => 'device_brands', 'categories' => 'device_categories', 'connectors' => 'device_connectors'];
 
 function list_values(PDO $pdo, int $userId, string $table): array {
     $stmt = $pdo->prepare("SELECT id, name FROM {$table} WHERE user_id = ? ORDER BY name");
@@ -18,6 +18,7 @@ if ($method === 'GET') {
     json_response([
         'brands' => list_values($pdo, (int)$user['id'], 'device_brands'),
         'categories' => list_values($pdo, (int)$user['id'], 'device_categories'),
+        'connectors' => list_values($pdo, (int)$user['id'], 'device_connectors'),
     ]);
 }
 

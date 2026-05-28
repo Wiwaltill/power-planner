@@ -1,7 +1,8 @@
-const apiUrl = 'api/devices.php';
-const settingsUrl = 'api/settings.php';
+const apiBase = (window.APP_BASE_PATH || '') + '/api';
+const apiUrl = apiBase + '/devices';
+const settingsUrl = apiBase + '/settings';
 let devices = [];
-let deviceSettings = {brands: [], categories: []};
+let deviceSettings = {brands: [], categories: [], connectors: []};
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 const byId = id => document.getElementById(id);
 const amp = d => Number(d.power_w || 0) / Number(d.voltage_v || 230);
@@ -19,6 +20,7 @@ async function loadSettings() {
   deviceSettings = await fetchJson(settingsUrl);
   renderSelect('brand', deviceSettings.brands || [], 'Marke auswählen');
   renderSelect('category', deviceSettings.categories || [], 'Kategorie auswählen');
+  renderSelect('connector', deviceSettings.connectors || [], 'Anschluss auswählen');
 }
 
 function renderSelect(id, rows, placeholder) {
@@ -53,6 +55,8 @@ function editDevice(id){
   ensureOption(byId('category'), d.category || '');
   byId('brand').value=d.brand || '';
   byId('category').value=d.category || '';
+  ensureOption(byId('connector'), d.connector || '');
+  byId('connector').value=d.connector || '';
   byId('power').value=d.power_w || 0;
   byId('voltage').value=d.voltage_v || 230;
   byId('connector').value=d.connector || '';
