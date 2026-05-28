@@ -33,6 +33,25 @@ require __DIR__ . '/inc/header.php';
       </div>
     </div>
   </div>
+  <div class="card p-3 p-md-4 mb-4">
+    <div class="d-flex flex-wrap gap-3 justify-content-between align-items-end">
+      <div class="flex-grow-1">
+        <label class="form-label">Aktiver Stromkreis</label>
+        <select class="form-select" id="activeCircuitSelect"></select>
+      </div>
+      <div class="flex-grow-1">
+        <label class="form-label">Neuen Stromkreis anlegen</label>
+        <div class="input-group">
+          <input class="form-control" id="newCircuitName" placeholder="z. B. Bühne links, Fronttruss, Dimmer 1">
+          <button class="btn btn-outline-primary" id="addCircuit" type="button">Anlegen</button>
+        </div>
+      </div>
+      <div>
+        <button class="btn btn-outline-danger" id="deleteCircuit" type="button">Stromkreis löschen</button>
+      </div>
+    </div>
+    <div class="small-muted mt-2">Jeder Stromkreis hat eigene L1/L2/L3-Bereiche. Geräte können weiterhin per Drag & Drop zwischen den Phasen verschoben werden.</div>
+  </div>
   <div class="row g-4">
     <div class="col-lg-4">
       <div class="card p-4 sticky-lg-top planner-form-card">
@@ -74,29 +93,14 @@ require __DIR__ . '/inc/header.php';
             <label class="form-label">Spannung</label>
             <input type="number" class="form-control" id="voltage" value="230" min="1" required>
           </div>
-          <div class="col-md-4">
-            <label class="form-label">DMX-Adresse</label>
-            <input type="number" class="form-control" id="dmxAddress" min="1" max="512" placeholder="z. B. 001">
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">Universum</label>
-            <input type="number" class="form-control" id="dmxUniverse" min="1" placeholder="z. B. 1">
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">Kanalmodus</label>
-            <input class="form-control" id="channelMode" placeholder="z. B. 14ch">
-          </div>
-          <div class="col-md-6">
+          <div class="col-12">
             <label class="form-label">Stromkreis</label>
-            <input class="form-control" id="circuit" placeholder="z. B. CEE16 Bühne L">
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Sicherung</label>
-            <input class="form-control" id="fuse" placeholder="z. B. B16 / C16 / C32">
+            <select class="form-select" id="circuitSelect"></select>
+            <div class="form-text">Geräte werden dem ausgewählten Stromkreis und der gewählten Phase zugeordnet.</div>
           </div>
           <div class="col-12">
             <label class="form-label">Bemerkungen</label>
-            <textarea class="form-control" id="remarks" rows="2" placeholder="z. B. Position, Sicherung, Besonderheiten"></textarea>
+            <textarea class="form-control" id="remarks" rows="2" placeholder="z. B. Position, Besonderheiten"></textarea>
           </div>
           <div class="col-12">
             <button class="btn btn-primary w-100" type="submit">Zum Plan hinzufügen</button>
@@ -124,7 +128,7 @@ require __DIR__ . '/inc/header.php';
       <div class="d-flex flex-wrap gap-2 justify-content-between align-items-end mb-3">
         <div>
           <h2 class="h4 mb-0">Phasenplaner</h2>
-          <div class="small-muted">Ziehe angelegte Geräte in die gewünschte Phase.</div>
+          <div class="small-muted">Ziehe angelegte Geräte im aktiven Stromkreis in die gewünschte Phase.</div>
         </div>
         <span class="badge text-bg-light border">Richtwert je Phase: 16 A</span>
       </div>
@@ -143,7 +147,7 @@ require __DIR__ . '/inc/header.php';
       <table class="table table-hover align-middle">
         <thead>
           <tr>
-            <th>Gerät</th><th>Marke</th><th>Kategorie</th><th>Anzahl</th><th>Phase</th><th>DMX</th><th>Stromkreis</th><th>Leistung</th><th>Strom</th><th>Bemerkungen</th><th></th>
+            <th>Gerät</th><th>Marke</th><th>Kategorie</th><th>Anzahl</th><th>Stromkreis</th><th>Phase</th><th>Leistung</th><th>Strom</th><th>Bemerkungen</th><th></th>
           </tr>
         </thead>
         <tbody id="planRows"></tbody>
@@ -170,7 +174,7 @@ require __DIR__ . '/inc/header.php';
     <h2>Gesamtliste</h2>
     <table class="print-table">
       <thead>
-        <tr><th>Gerät</th><th>Marke</th><th>Kategorie</th><th>Anzahl</th><th>Phase</th><th>DMX</th><th>Stromkreis</th><th>Leistung</th><th>Strom</th><th>Bemerkungen</th></tr>
+        <tr><th>Gerät</th><th>Marke</th><th>Kategorie</th><th>Anzahl</th><th>Stromkreis</th><th>Phase</th><th>Leistung</th><th>Strom</th><th>Bemerkungen</th></tr>
       </thead>
       <tbody id="printRows"></tbody>
     </table>

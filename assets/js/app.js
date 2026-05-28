@@ -2,8 +2,11 @@ const phases = ['L1', 'L2', 'L3'];
 let devices = [];
 let activeProject = localStorage.getItem('stromplan.activeProject') || 'Standard';
 let projectMeta = JSON.parse(localStorage.getItem(`stromplan.project.${activeProject}.meta`) || '{}');
+let circuits = JSON.parse(localStorage.getItem(`stromplan.project.${activeProject}.circuits`) || '[{"id":"default","name":"Standard-Stromkreis"}]');
+if (!Array.isArray(circuits) || !circuits.length) circuits = [{ id: 'default', name: 'Standard-Stromkreis' }];
+let activeCircuit = localStorage.getItem(`stromplan.project.${activeProject}.activeCircuit`) || circuits[0].id;
 let plan = JSON.parse(localStorage.getItem(`stromplan.project.${activeProject}.plan`) || localStorage.getItem('stromplan.plan') || '[]');
-plan = plan.map(item => ({ remarks: '', dmx_address: '', dmx_universe: '', channel_mode: '', circuit: '', fuse: '', ...item }));
+plan = plan.map(item => ({ remarks: '', circuit_id: item.circuit_id || item.circuitId || 'default', circuit_name: item.circuit_name || item.circuit || 'Standard-Stromkreis', ...item }));
 let undoStack = [];
 let redoStack = [];
 const ampLimit = 16;
@@ -11,9 +14,48 @@ const ampLimit = 16;
 const fmtW = value => `${Math.round(value).toLocaleString('de-DE')} W`;
 const fmtA = value => `${Number(value || 0).toFixed(2).replace('.', ',')} A`;
 const csvEsc = value => `"${String(value ?? '').replace(/"/g, '""')}"`;
-const dmxLabel = item => [item.dmx_universe ? `U${item.dmx_universe}` : '', item.dmx_address ? `A${item.dmx_address}` : '', item.channel_mode || ''].filter(Boolean).join(' / ') || '-';
 const calcAmp = (watts, voltage) => watts / voltage;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
+
+function circuitName(id) {
+  return circuits.find(circuit => circuit.id === id)?.name || 'Standard-Stromkreis';
+}
+function ensureActiveCircuit() {
+  if (!circuits.some(circuit => circuit.id === activeCircuit)) activeCircuit = circuits[0]?.id || 'default';
+}
+function saveCircuits() {
+  ensureActiveCircuit();
+  localStorage.setItem(`stromplan.project.${activeProject}.circuits`, JSON.stringify(circuits));
+  localStorage.setItem(`stromplan.project.${activeProject}.activeCircuit`, activeCircuit);
+}
+function renderCircuitSelects() {
+  ensureActiveCircuit();
+  const html = circuits.map(circuit => `<option value="${esc(circuit.id)}" ${circuit.id === activeCircuit ? 'selected' : ''}>${esc(circuit.name)}</option>`).join('');
+  ['activeCircuitSelect', 'circuitSelect'].forEach(id => {
+    const select = document.getElementById(id);
+    if (select) select.innerHTML = html;
+    if (select) select.value = activeCircuit;
+  });
+}
+function getOrCreateCircuitByName(name) {
+  const clean = String(name || '').trim() || 'Standard-Stromkreis';
+  let existing = circuits.find(circuit => circuit.name === clean);
+  if (existing) return existing.id;
+  const id = `circuit-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  circuits.push({ id, name: clean });
+  return id;
+}
+function migratePlanCircuits() {
+  let changed = false;
+  plan.forEach(item => {
+    if ((!item.circuit_id || item.circuit_id === 'default') && item.circuit_name && item.circuit_name !== 'Standard-Stromkreis') {
+      item.circuit_id = getOrCreateCircuitByName(item.circuit_name);
+      changed = true;
+    }
+    item.circuit_name = circuitName(item.circuit_id || 'default');
+  });
+  if (changed) savePlan();
+}
 
 function deviceLabel(device) {
   return `${device.brand ? device.brand + ' - ' : ''}${device.name} (${device.power_w} W)`;
@@ -104,6 +146,7 @@ async function loadDevices() {
 }
 
 function savePlan() {
+  saveCircuits();
   localStorage.setItem(`stromplan.project.${activeProject}.plan`, JSON.stringify(plan));
   localStorage.setItem('stromplan.activeProject', activeProject);
   localStorage.setItem('stromplan.plan', JSON.stringify(plan));
@@ -111,7 +154,7 @@ function savePlan() {
 
 function phaseTotals() {
   const totals = { L1: { watts: 0, amps: 0 }, L2: { watts: 0, amps: 0 }, L3: { watts: 0, amps: 0 } };
-  plan.forEach(item => {
+  plan.filter(item => (item.circuit_id || 'default') === activeCircuit).forEach(item => {
     if (!totals[item.phase]) item.phase = 'L1';
     totals[item.phase].watts += Number(item.total_w || 0);
     totals[item.phase].amps += Number(item.total_a || 0);
@@ -130,7 +173,7 @@ function renderPhaseBoards() {
   const boards = document.getElementById('phaseBoards');
 
   boards.innerHTML = phases.map(phase => {
-    const items = plan.filter(item => item.phase === phase);
+    const items = plan.filter(item => (item.circuit_id || 'default') === activeCircuit && item.phase === phase);
     const amps = totals[phase].amps;
     const progress = Math.min((amps / ampLimit) * 100, 100);
     const status = statusClass(amps);
@@ -163,8 +206,7 @@ function renderPlanCard(item) {
       <div>
         <strong>${item.brand ? item.brand + ' · ' : ''}${item.name}</strong>
         <div class="small-muted">${item.category || '-'} · Anzahl: ${item.quantity} · ${fmtW(item.total_w)}</div>
-        ${dmxLabel(item) !== '-' ? `<div class="small-muted">DMX: ${esc(dmxLabel(item))}</div>` : ''}
-        ${item.circuit || item.fuse ? `<div class="small-muted">${esc([item.circuit, item.fuse].filter(Boolean).join(' · '))}</div>` : ''}
+        <div class="small-muted">Stromkreis: ${esc(item.circuit_name || circuitName(item.circuit_id))}</div>
         ${item.remarks ? `<div class="plan-remarks mt-1">${esc(item.remarks)}</div>` : ''}
       </div>
       <button class="btn btn-sm btn-outline-danger" onclick="removeItem(${index})" title="Entfernen">×</button>
@@ -275,12 +317,22 @@ function updateItemPhase(id, value) {
 
 window.updateItemQuantity = updateItemQuantity;
 window.updateItemRemarks = updateItemRemarks;
+function updateItemCircuit(id, value) {
+  const item = plan.find(entry => entry.id === id);
+  if (!item || !circuits.some(circuit => circuit.id === value)) return;
+  snapshotPlan();
+  item.circuit_id = value;
+  item.circuit_name = circuitName(value);
+  savePlan();
+  renderPlan();
+}
 window.updateItemPhase = updateItemPhase;
+window.updateItemCircuit = updateItemCircuit;
 
 function renderPrintExport() {
   const totals = phaseTotals();
   const now = new Date();
-  document.getElementById('printDate').textContent = `Projekt: ${projectMeta.name || activeProject} · Kunde: ${projectMeta.client || '-'} · Techniker: ${projectMeta.technician || '-'} · Exportiert am ${now.toLocaleDateString('de-DE')} um ${now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`;
+  document.getElementById('printDate').textContent = `Projekt: ${projectMeta.name || activeProject} · Stromkreis: ${circuitName(activeCircuit)} · Kunde: ${projectMeta.client || '-'} · Techniker: ${projectMeta.technician || '-'} · Exportiert am ${now.toLocaleDateString('de-DE')} um ${now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`;
   const header = document.querySelector('.print-header');
   if (header && projectMeta.logo) header.style.backgroundImage = `url(${projectMeta.logo})`;
 
@@ -296,22 +348,20 @@ function renderPrintExport() {
   }).join('');
 
   document.getElementById('printPhaseTables').innerHTML = phases.map(phase => {
-    const rows = plan.filter(item => item.phase === phase);
+    const rows = plan.filter(item => (item.circuit_id || 'default') === activeCircuit && item.phase === phase);
     const body = rows.length ? rows.map(item => `<tr>
       <td>${esc(item.brand ? item.brand + ' · ' + item.name : item.name)}</td>
       <td>${esc(item.category || '-')}</td>
       <td>${item.quantity}</td>
-      <td>${esc(dmxLabel(item))}</td>
-      <td>${esc([item.circuit, item.fuse].filter(Boolean).join(' · ') || '-')}</td>
       <td>${fmtW(item.total_w)}</td>
       <td>${fmtA(item.total_a)}</td>
       <td>${esc(item.remarks || '-')}</td>
-    </tr>`).join('') : '<tr><td colspan="8">Keine Geräte auf dieser Phase.</td></tr>';
+    </tr>`).join('') : '<tr><td colspan="6">Keine Geräte auf dieser Phase.</td></tr>';
 
     return `<div class="print-phase-block">
       <h3>${phase} · ${fmtA(totals[phase].amps)} · ${fmtW(totals[phase].watts)}</h3>
       <table class="print-table">
-        <thead><tr><th>Gerät</th><th>Kategorie</th><th>Anzahl</th><th>DMX</th><th>Stromkreis</th><th>Leistung</th><th>Strom</th><th>Bemerkungen</th></tr></thead>
+        <thead><tr><th>Gerät</th><th>Kategorie</th><th>Anzahl</th><th>Leistung</th><th>Strom</th><th>Bemerkungen</th></tr></thead>
         <tbody>${body}</tbody>
       </table>
     </div>`;
@@ -322,13 +372,12 @@ function renderPrintExport() {
     <td>${esc(item.brand || '-')}</td>
     <td>${esc(item.category || '-')}</td>
     <td>${item.quantity}</td>
+    <td>${esc(item.circuit_name || circuitName(item.circuit_id))}</td>
     <td>${item.phase}</td>
-    <td>${esc(dmxLabel(item))}</td>
-    <td>${esc([item.circuit, item.fuse].filter(Boolean).join(' · ') || '-')}</td>
     <td>${fmtW(item.total_w)}</td>
     <td>${fmtA(item.total_a)}</td>
     <td>${esc(item.remarks || '-')}</td>
-  </tr>`).join('') : '<tr><td colspan="10">Noch keine Geräte im Plan.</td></tr>';
+  </tr>`).join('') : '<tr><td colspan="9">Noch keine Geräte im Plan.</td></tr>';
 }
 
 function exportPdf() {
@@ -339,16 +388,15 @@ function exportPdf() {
 function renderPlan() {
   const body = document.getElementById('planRows');
   if (!plan.length) {
-    body.innerHTML = '<tr><td colspan="11" class="text-center text-muted py-4">Noch keine Geräte im Plan.</td></tr>';
+    body.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">Noch keine Geräte im Plan.</td></tr>';
   } else {
     body.innerHTML = plan.map((item, index) => `<tr>
       <td>${esc(item.name)}</td>
       <td>${esc(item.brand || '-')}</td>
       <td>${esc(item.category || '-')}</td>
       <td style="min-width: 95px;"><input type="number" class="form-control form-control-sm plan-quantity-input" min="1" value="${item.quantity}" onchange="updateItemQuantity('${item.id}', this.value)"></td>
+      <td style="min-width: 160px;"><select class="form-select form-select-sm" onchange="updateItemCircuit('${item.id}', this.value)">${circuits.map(circuit => `<option value="${esc(circuit.id)}" ${circuit.id === (item.circuit_id || 'default') ? 'selected' : ''}>${esc(circuit.name)}</option>`).join('')}</select></td>
       <td><select class="form-select form-select-sm" onchange="updateItemPhase('${item.id}', this.value)">${phases.map(phase => `<option value="${phase}" ${phase === item.phase ? 'selected' : ''}>${phase}</option>`).join('')}</select></td>
-      <td>${esc(dmxLabel(item))}</td>
-      <td>${esc([item.circuit, item.fuse].filter(Boolean).join(' · ') || '-')}</td>
       <td>${fmtW(item.total_w)}</td>
       <td>${fmtA(item.total_a)}</td>
       <td style="min-width: 220px;"><textarea class="form-control form-control-sm plan-remarks-input" rows="1" placeholder="Bemerkung" onchange="updateItemRemarks('${item.id}', this.value)">${esc(item.remarks || '')}</textarea></td>
@@ -387,17 +435,14 @@ document.getElementById('loadForm').addEventListener('submit', event => {
     quantity,
     phase: document.getElementById('phase').value,
     remarks: document.getElementById('remarks').value.trim(),
-    dmx_address: document.getElementById('dmxAddress').value.trim(),
-    dmx_universe: document.getElementById('dmxUniverse').value.trim(),
-    channel_mode: document.getElementById('channelMode').value.trim(),
-    circuit: document.getElementById('circuit').value.trim(),
-    fuse: document.getElementById('fuse').value.trim(),
+    circuit_id: document.getElementById('circuitSelect').value || activeCircuit,
+    circuit_name: circuitName(document.getElementById('circuitSelect').value || activeCircuit),
     voltage_v: voltage,
     power_w: Number(device.power_w),
     total_w: totalW,
     total_a: calcAmp(totalW, voltage)
   });
-  ['remarks','dmxAddress','dmxUniverse','channelMode','circuit','fuse'].forEach(id => document.getElementById(id).value = '');
+  ['remarks'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('deviceSearch').value = '';
   document.getElementById('deviceSelect').value = '';
   document.getElementById('deviceDropdownLabel').textContent = 'Gerät suchen oder auswählen...';
@@ -432,11 +477,8 @@ function normalizeImportedPlan(importedPlan) {
       quantity,
       phase: phases.includes(item.phase) ? item.phase : 'L1',
       remarks: String(item.remarks || ''),
-      dmx_address: String(item.dmx_address || ''),
-      dmx_universe: String(item.dmx_universe || ''),
-      channel_mode: String(item.channel_mode || ''),
-      circuit: String(item.circuit || ''),
-      fuse: String(item.fuse || ''),
+      circuit_id: String(item.circuit_id || item.circuitId || getOrCreateCircuitByName(item.circuit_name || item.circuit || 'Standard-Stromkreis')),
+      circuit_name: circuitName(String(item.circuit_id || item.circuitId || getOrCreateCircuitByName(item.circuit_name || item.circuit || 'Standard-Stromkreis'))),
       voltage_v: voltage,
       power_w: powerW,
       total_w: totalW,
@@ -452,6 +494,10 @@ function importJsonFile(file) {
     try {
       const data = JSON.parse(reader.result);
       const importedPlan = Array.isArray(data) ? data : data.plan;
+      if (Array.isArray(data.circuits) && data.circuits.length) {
+        circuits = data.circuits.map(circuit => ({ id: String(circuit.id || crypto.randomUUID()), name: String(circuit.name || 'Stromkreis') }));
+        activeCircuit = data.active_circuit || circuits[0].id;
+      }
       const nextPlan = normalizeImportedPlan(importedPlan);
       if (!confirm(`Importierten Plan mit ${nextPlan.length} Einträgen laden? Der aktuelle Plan wird ersetzt.`)) return;
       snapshotPlan();
@@ -474,7 +520,7 @@ document.getElementById('importJsonFile').addEventListener('change', event => im
 document.getElementById('deviceSearch').addEventListener('input', renderDeviceSelect);
 
 document.getElementById('exportJson').addEventListener('click', () => {
-  const blob = new Blob([JSON.stringify({ exported_at: new Date().toISOString(), project: projectMeta, plan, totals: phaseTotals() }, null, 2)], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify({ exported_at: new Date().toISOString(), project: projectMeta, circuits, active_circuit: activeCircuit, plan, totals: phaseTotals() }, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -508,6 +554,8 @@ function saveProjectMeta() {
   };
   if (name !== activeProject) {
     localStorage.setItem(`stromplan.project.${name}.plan`, JSON.stringify(plan));
+    localStorage.setItem(`stromplan.project.${name}.circuits`, JSON.stringify(circuits));
+    localStorage.setItem(`stromplan.project.${name}.activeCircuit`, activeCircuit);
     activeProject = name;
   }
   localStorage.setItem(`stromplan.project.${activeProject}.meta`, JSON.stringify(projectMeta));
@@ -517,17 +565,23 @@ function saveProjectMeta() {
 function switchProject(name) {
   activeProject = name || 'Standard';
   projectMeta = JSON.parse(localStorage.getItem(`stromplan.project.${activeProject}.meta`) || '{}');
+  circuits = JSON.parse(localStorage.getItem(`stromplan.project.${activeProject}.circuits`) || '[{"id":"default","name":"Standard-Stromkreis"}]');
+  if (!Array.isArray(circuits) || !circuits.length) circuits = [{ id: 'default', name: 'Standard-Stromkreis' }];
+  activeCircuit = localStorage.getItem(`stromplan.project.${activeProject}.activeCircuit`) || circuits[0].id;
   plan = JSON.parse(localStorage.getItem(`stromplan.project.${activeProject}.plan`) || '[]');
   undoStack = [];
   redoStack = [];
   localStorage.setItem('stromplan.activeProject', activeProject);
   loadProjectMetaToForm();
+  migratePlanCircuits();
+  renderCircuitSelects();
   renderPlan();
 }
 function autoDistributePlan() {
-  if (!plan.length) return;
+  const circuitItems = plan.filter(item => (item.circuit_id || 'default') === activeCircuit);
+  if (!circuitItems.length) return;
   snapshotPlan();
-  const sorted = [...plan].sort((a, b) => Number(b.total_a || 0) - Number(a.total_a || 0));
+  const sorted = [...circuitItems].sort((a, b) => Number(b.total_a || 0) - Number(a.total_a || 0));
   const totals = { L1: 0, L2: 0, L3: 0 };
   sorted.forEach(item => {
     const target = phases.reduce((a, b) => totals[a] <= totals[b] ? a : b);
@@ -538,8 +592,8 @@ function autoDistributePlan() {
   renderPlan();
 }
 function exportCsv() {
-  const rows = [['Gerät','Marke','Kategorie','Anzahl','Phase','DMX','Stromkreis','Leistung W','Strom A','Bemerkungen']]
-    .concat(plan.map(item => [item.name, item.brand, item.category, item.quantity, item.phase, dmxLabel(item), [item.circuit, item.fuse].filter(Boolean).join(' · '), item.total_w, fmtA(item.total_a), item.remarks]));
+  const rows = [['Gerät','Marke','Kategorie','Anzahl','Stromkreis','Phase','Leistung W','Strom A','Bemerkungen']]
+    .concat(plan.map(item => [item.name, item.brand, item.category, item.quantity, item.circuit_name || circuitName(item.circuit_id), item.phase, item.total_w, fmtA(item.total_a), item.remarks]));
   const blob = new Blob([rows.map(row => row.map(csvEsc).join(';')).join('\n')], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -548,6 +602,48 @@ function exportCsv() {
   a.click();
   URL.revokeObjectURL(url);
 }
+
+function addCircuit() {
+  const input = document.getElementById('newCircuitName');
+  const name = input.value.trim();
+  if (!name) return;
+  const id = `circuit-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  circuits.push({ id, name });
+  activeCircuit = id;
+  input.value = '';
+  savePlan();
+  renderCircuitSelects();
+  renderPlan();
+}
+function deleteActiveCircuit() {
+  if (circuits.length <= 1) {
+    alert('Mindestens ein Stromkreis muss vorhanden bleiben.');
+    return;
+  }
+  const name = circuitName(activeCircuit);
+  const affected = plan.filter(item => (item.circuit_id || 'default') === activeCircuit).length;
+  if (!confirm(`Stromkreis "${name}" löschen? ${affected} Planeinträge werden in den ersten verbleibenden Stromkreis verschoben.`)) return;
+  const oldId = activeCircuit;
+  circuits = circuits.filter(circuit => circuit.id !== oldId);
+  activeCircuit = circuits[0].id;
+  plan.forEach(item => {
+    if ((item.circuit_id || 'default') === oldId) {
+      item.circuit_id = activeCircuit;
+      item.circuit_name = circuitName(activeCircuit);
+    }
+  });
+  savePlan();
+  renderCircuitSelects();
+  renderPlan();
+}
+function changeActiveCircuit(value) {
+  if (!circuits.some(circuit => circuit.id === value)) return;
+  activeCircuit = value;
+  saveCircuits();
+  renderCircuitSelects();
+  renderPlan();
+}
+
 function toggleDarkMode() {
   document.body.classList.toggle('dark-mode');
   localStorage.setItem('stromplan.darkMode', document.body.classList.contains('dark-mode') ? '1' : '0');
@@ -559,6 +655,8 @@ function toggleFullscreen() {
 if (localStorage.getItem('stromplan.darkMode') === '1') document.body.classList.add('dark-mode');
 loadProjectList();
 loadProjectMetaToForm();
+migratePlanCircuits();
+renderCircuitSelects();
 document.getElementById('saveProject').addEventListener('click', saveProjectMeta);
 document.getElementById('projectSelect').addEventListener('change', event => switchProject(event.target.value));
 document.getElementById('autoDistribute').addEventListener('click', autoDistributePlan);
@@ -568,5 +666,9 @@ document.getElementById('exportCsv').addEventListener('click', exportCsv);
 document.getElementById('toggleDarkMode').addEventListener('click', toggleDarkMode);
 document.getElementById('toggleFullscreen').addEventListener('click', toggleFullscreen);
 document.getElementById('categoryFilter').addEventListener('change', renderDeviceSelect);
+document.getElementById('activeCircuitSelect').addEventListener('change', event => changeActiveCircuit(event.target.value));
+document.getElementById('circuitSelect').addEventListener('change', event => changeActiveCircuit(event.target.value));
+document.getElementById('addCircuit').addEventListener('click', addCircuit);
+document.getElementById('deleteCircuit').addEventListener('click', deleteActiveCircuit);
 
 loadDevices().then(renderPlan);
