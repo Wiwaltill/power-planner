@@ -78,7 +78,7 @@ function renderPrint(){ const totals=phaseTotals(); els.printSummary.innerHTML=`
 function render(){ renderCircuitSelects(); renderDeviceSelect(); renderPhaseBoards(); renderRows(); renderPrint(); }
 async function loadAll(){ [devices,circuits,plan]=await Promise.all([getJson(api.devices),getJson(api.circuits),getJson(api.items)]); if(!activeCircuit && circuits[0]) activeCircuit=circuits[0].id; renderCategoryFilter(); render(); }
 function registerDragAndDrop(){ document.querySelectorAll('.plan-card').forEach(card=>{ card.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',card.dataset.id); card.classList.add('dragging');}); card.addEventListener('dragend',()=>card.classList.remove('dragging')); }); document.querySelectorAll('.phase-items').forEach(zone=>{ zone.addEventListener('dragover',e=>{e.preventDefault(); zone.closest('.phase-dropzone').classList.add('drag-over');}); zone.addEventListener('dragleave',()=>zone.closest('.phase-dropzone').classList.remove('drag-over')); zone.addEventListener('drop',async e=>{ e.preventDefault(); zone.closest('.phase-dropzone').classList.remove('drag-over'); const id=e.dataTransfer.getData('text/plain'); const i=plan.find(x=>String(x.id)===id); if(i) await savePatch(i,{phase:zone.dataset.phase,circuit_id:activeCircuit}); }); }); }
-els.loadForm.addEventListener('submit',async e=>{ e.preventDefault(); const d=devices.find(x=>String(x.id)===els.deviceSelect.value); if(!d){ alert('Bitte Gerät auswählen.'); return; } await sendJson(api.items,'POST',{device_id:d.id,circuit_id:els.circuitSelect.value,quantity:els.quantity.value,phase:els.phase.value,voltage_v:els.voltage.value,remarks:els.remarks.value}); els.loadForm.reset(); els.quantity.value=1; els.voltage.value=230; els.deviceSelect.value=''; await loadAll(); });
+els.loadForm.addEventListener('submit',async e=>{ e.preventDefault(); const d=devices.find(x=>String(x.id)===els.deviceSelect.value); if(!d){ AppUI.warning('Bitte Gerät auswählen.'); return; } await sendJson(api.items,'POST',{device_id:d.id,circuit_id:els.circuitSelect.value,quantity:els.quantity.value,phase:els.phase.value,voltage_v:els.voltage.value,remarks:els.remarks.value}); els.loadForm.reset(); els.quantity.value=1; els.voltage.value=230; els.deviceSelect.value=''; await loadAll(); });
 els.activeCircuitSelect.addEventListener('change',()=>{ activeCircuit=els.activeCircuitSelect.value; render(); }); els.circuitSelect.addEventListener('change',()=>{ activeCircuit=els.circuitSelect.value; render(); });
 async function createCircuit(){
   const name = els.newCircuitName.value.trim();
@@ -90,17 +90,17 @@ async function createCircuit(){
     activeCircuit = res.id || null;
     await loadAll();
   } catch(err) {
-    alert('Stromkreis konnte nicht angelegt werden: ' + err.message);
+    AppUI.error('Stromkreis konnte nicht angelegt werden: ' + err.message);
   } finally {
     els.addCircuit.disabled = false;
   }
 }
 els.addCircuit.addEventListener('click', createCircuit);
 els.newCircuitName.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); createCircuit(); } });
-els.deleteCircuit.addEventListener('click',async()=>{ if(!confirm('Stromkreis löschen? Zugeordnete Planpositionen werden entfernt.'))return; const r=await fetch(`${api.circuits}&id=${activeCircuit}`,{method:'DELETE',credentials:'same-origin'}); const res=await r.json(); if(!r.ok){ alert(res.error); return; } activeCircuit=null; await loadAll(); });
+els.deleteCircuit.addEventListener('click',async()=>{ if(!(await AppUI.confirm('Stromkreis löschen? Zugeordnete Planpositionen werden entfernt.', {title:'Stromkreis löschen', confirmText:'Löschen'})))return; const r=await fetch(`${api.circuits}&id=${activeCircuit}`,{method:'DELETE',credentials:'same-origin'}); const res=await r.json(); if(!r.ok){ AppUI.error(res.error); return; } activeCircuit=null; await loadAll(); });
 els.deviceSearch.addEventListener('input',renderDeviceSelect); els.categoryFilter.addEventListener('change',renderDeviceSelect);
 els.exportPdf.addEventListener('click',()=>{ renderPrint(); window.print(); });
 els.exportCsv.addEventListener('click',()=>{ const rows=[['Gerät','Marke','Anzahl','Stromkreis','Phase','Watt','Ampere','Bemerkung'],...plan.map(i=>[i.name,i.brand,i.quantity,circuitName(i.circuit_id),i.phase,itemWatts(i),itemAmps(i).toFixed(2),i.remarks||''])]; const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n'); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download='stromplan.csv'; a.click(); });
 els.autoDistribute.addEventListener('click',async()=>{ const current=plan.filter(i=>Number(i.circuit_id)===Number(activeCircuit)); let totals={L1:0,L2:0,L3:0}; for(const i of current.sort((a,b)=>itemWatts(b)-itemWatts(a))){ const phase=phases.reduce((min,p)=>totals[p]<totals[min]?p:min,'L1'); totals[phase]+=itemAmps(i); await sendJson(`${api.items}&id=${i.id}`,'PATCH',{phase}); } await loadAll(); });
-els.clearPlan.addEventListener('click',async()=>{ if(confirm('Gesamten Plan leeren?')){ await fetch(`${api.items}&all=1`,{method:'DELETE',credentials:'same-origin'}); await loadAll(); }});
+els.clearPlan.addEventListener('click',async()=>{ if(await AppUI.confirm('Gesamten Plan leeren?', {title:'Plan leeren', confirmText:'Leeren'})){ await fetch(`${api.items}&all=1`,{method:'DELETE',credentials:'same-origin'}); await loadAll(); }});
 loadAll();

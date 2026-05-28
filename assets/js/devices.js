@@ -75,9 +75,9 @@ function ensureOption(select, value) {
 }
 
 async function deleteDevice(id){
-  if(!confirm('Gerät wirklich löschen?')) return;
+  if(!(await AppUI.confirm('Gerät wirklich löschen?', {title:'Gerät löschen', confirmText:'Löschen'}))) return;
   try { await fetchJson(`${apiUrl}?id=${id}`,{method:'DELETE'}); await loadDevices(); }
-  catch(err) { alert(err.message); }
+  catch(err) { AppUI.error(err.message); }
 }
 window.deleteDevice = deleteDevice;
 
@@ -97,7 +97,7 @@ byId('deviceForm').addEventListener('submit', async e => {
     await fetchJson(apiUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     resetForm();
     await loadDevices();
-  } catch(err) { alert('Gerät konnte nicht gespeichert werden: ' + err.message); }
+  } catch(err) { AppUI.error('Gerät konnte nicht gespeichert werden: ' + err.message); }
 });
 
 byId('resetForm').addEventListener('click', resetForm);
@@ -110,12 +110,12 @@ byId('importDevicesFile').addEventListener('change', async e => {
     const json=JSON.parse(await f.text());
     const result=await fetchJson(`${apiUrl}?import=1`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(json)});
     await loadDevices();
-    alert(`${result.imported} Gerät(e) importiert.`);
-  } catch(err){ alert(err.message || 'Import fehlgeschlagen.'); }
+    AppUI.success(`${result.imported} Gerät(e) importiert.`);
+  } catch(err){ AppUI.error(err.message || 'Import fehlgeschlagen.'); }
   finally{ e.target.value=''; }
 });
 
 (async function init(){
   try { await loadSettings(); await loadDevices(); }
-  catch(err) { alert(err.message); }
+  catch(err) { AppUI.error(err.message); }
 })();
