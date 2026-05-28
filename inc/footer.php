@@ -17,5 +17,3 @@
 <?php if (!empty($pageScript)): ?><script src="<?= e(app_url($pageScript)) ?>"></script><?php endif; ?>
 </body>
 </html>
-
-<footer class="text-center py-3 small text-muted">© <?php echo date("Y"); ?> Power Planner · v1.0.0 · <a href="https://github.com/Wiwaltill/power-planner/" target="_blank"><i class="bi bi-github"></i> GitHub</a></footer>
