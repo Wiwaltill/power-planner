@@ -1,6 +1,6 @@
 <footer class="app-footer mt-auto py-3">
   <div class="container small text-center text-muted">
-    © <?= date('Y') ?> Stromplaner · <a href="https://github.com/" target="_blank" rel="noopener noreferrer">GitHub</a>
+    © <?= date('Y') ?> Stromplaner · <a href="https://github.com/Wiwaltill/power-planner" target="_blank" rel="noopener noreferrer">GitHub</a>
   </div>
 </footer>
 
