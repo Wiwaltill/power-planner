@@ -11,36 +11,95 @@ const api = {
   circuits:`api/circuits.php?project_id=${projectId}`,
   items:`api/plan-items.php?project_id=${projectId}`
 };
-async function getJson(url){ const r=await fetch(url); return await r.json(); }
-async function savePatch(item, data){ await fetch(`${api.items}&id=${item.id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}); await loadAll(); }
+const $ = id => document.getElementById(id);
+const els = {
+  activeCircuitSelect: $('activeCircuitSelect'),
+  circuitSelect: $('circuitSelect'),
+  newCircuitName: $('newCircuitName'),
+  addCircuit: $('addCircuit'),
+  deleteCircuit: $('deleteCircuit'),
+  loadForm: $('loadForm'),
+  deviceSearch: $('deviceSearch'),
+  deviceSelect: $('deviceSelect'),
+  deviceDropdownButton: $('deviceDropdownButton'),
+  deviceDropdownLabel: $('deviceDropdownLabel'),
+  deviceOptions: $('deviceOptions'),
+  categoryFilter: $('categoryFilter'),
+  quantity: $('quantity'),
+  phase: $('phase'),
+  voltage: $('voltage'),
+  remarks: $('remarks'),
+  phaseBoards: $('phaseBoards'),
+  planRows: $('planRows'),
+  printSummary: $('printSummary'),
+  printPhaseTables: $('printPhaseTables'),
+  printRows: $('printRows'),
+  exportPdf: $('exportPdf'),
+  exportCsv: $('exportCsv'),
+  autoDistribute: $('autoDistribute'),
+  clearPlan: $('clearPlan')
+};
+async function getJson(url){
+  const r=await fetch(url,{credentials:'same-origin'});
+  const text=await r.text();
+  let data;
+  try { data = text ? JSON.parse(text) : null; } catch(e) { throw new Error('Ungültige Serverantwort: '+text.slice(0,160)); }
+  if(!r.ok) throw new Error((data && data.error) ? data.error : 'Serverfehler');
+  return data;
+}
+async function sendJson(url, method='POST', data={}){
+  const r=await fetch(url,{method,credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+  const text=await r.text();
+  let res={};
+  try { res = text ? JSON.parse(text) : {}; } catch(e) { throw new Error('Ungültige Serverantwort: '+text.slice(0,160)); }
+  if(!r.ok) throw new Error(res.error || 'Serverfehler');
+  return res;
+}
+async function savePatch(item, data){ await sendJson(`${api.items}&id=${item.id}`,'PATCH',data); await loadAll(); }
 function deviceLabel(d){ return `${d.brand ? d.brand + ' - ' : ''}${d.name} (${d.power_w} W)`; }
 function selectedCircuit(){ return circuits.find(c=>Number(c.id)===Number(activeCircuit)) || circuits[0]; }
 function circuitName(id){ return circuits.find(c=>Number(c.id)===Number(id))?.name || '-'; }
 function renderCircuitSelects(){ if(!activeCircuit && circuits[0]) activeCircuit=circuits[0].id; const html=circuits.map(c=>`<option value="${c.id}" ${Number(c.id)===Number(activeCircuit)?'selected':''}>${esc(c.name)}</option>`).join(''); ['activeCircuitSelect','circuitSelect'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=html; if(el) el.value=activeCircuit; }); }
-function renderCategoryFilter(){ const cats=[...new Set(devices.map(d=>d.category).filter(Boolean))].sort(); categoryFilter.innerHTML='<option value="">Alle Kategorien</option>'+cats.map(c=>`<option>${esc(c)}</option>`).join(''); }
-function renderDeviceSelect(){ const term=(deviceSearch.value||'').toLowerCase(); const cat=categoryFilter.value; const selected=devices.find(d=>String(d.id)===deviceSelect.value); deviceDropdownLabel.textContent=selected ? deviceLabel(selected) : 'Gerät suchen oder auswählen...'; const list=devices.filter(d=>(!cat||d.category===cat) && [d.name,d.brand,d.category,d.power_w].join(' ').toLowerCase().includes(term)); deviceOptions.innerHTML=list.length ? list.map(d=>`<button type="button" class="list-group-item list-group-item-action" onclick="selectDevice(${d.id})"><strong>${esc(d.brand ? d.brand+' · '+d.name : d.name)}</strong><span class="small text-muted d-block">${esc(d.category||'-')} · ${esc(d.power_w)} W</span></button>`).join('') : '<div class="dropdown-item text-muted small">Kein Gerät gefunden.</div>'; }
-function selectDevice(id){ const d=devices.find(x=>Number(x.id)===Number(id)); if(!d)return; deviceSelect.value=d.id; voltage.value=d.voltage_v||230; deviceSearch.value=''; renderDeviceSelect(); bootstrap.Dropdown.getOrCreateInstance(deviceDropdownButton).hide(); }
+function renderCategoryFilter(){ const cats=[...new Set(devices.map(d=>d.category).filter(Boolean))].sort(); els.categoryFilter.innerHTML='<option value="">Alle Kategorien</option>'+cats.map(c=>`<option>${esc(c)}</option>`).join(''); }
+function renderDeviceSelect(){ const term=(els.deviceSearch.value||'').toLowerCase(); const cat=els.categoryFilter.value; const selected=devices.find(d=>String(d.id)===els.deviceSelect.value); els.deviceDropdownLabel.textContent=selected ? deviceLabel(selected) : 'Gerät suchen oder auswählen...'; const list=devices.filter(d=>(!cat||d.category===cat) && [d.name,d.brand,d.category,d.power_w].join(' ').toLowerCase().includes(term)); els.deviceOptions.innerHTML=list.length ? list.map(d=>`<button type="button" class="list-group-item list-group-item-action" onclick="selectDevice(${d.id})"><strong>${esc(d.brand ? d.brand+' · '+d.name : d.name)}</strong><span class="small text-muted d-block">${esc(d.category||'-')} · ${esc(d.power_w)} W</span></button>`).join('') : '<div class="dropdown-item text-muted small">Kein Gerät gefunden.</div>'; }
+function selectDevice(id){ const d=devices.find(x=>Number(x.id)===Number(id)); if(!d)return; els.deviceSelect.value=d.id; els.voltage.value=d.voltage_v||230; els.deviceSearch.value=''; renderDeviceSelect(); bootstrap.Dropdown.getOrCreateInstance(els.deviceDropdownButton).hide(); }
 window.selectDevice=selectDevice;
 function phaseTotals(){ const totals={L1:{w:0,a:0},L2:{w:0,a:0},L3:{w:0,a:0}}; plan.filter(i=>Number(i.circuit_id)===Number(activeCircuit)).forEach(i=>{ totals[i.phase].w += itemWatts(i); totals[i.phase].a += itemAmps(i); }); return totals; }
 function statusClass(a){ const limit=Number(selectedCircuit()?.amp_limit||16); return a>=limit?'danger':a>=limit*.8?'warning':''; }
-function renderPhaseBoards(){ const totals=phaseTotals(); phaseBoards.innerHTML=phases.map(p=>{ const items=plan.filter(i=>Number(i.circuit_id)===Number(activeCircuit)&&i.phase===p); const limit=Number(selectedCircuit()?.amp_limit||16); const prog=Math.min(totals[p].a/limit*100,100); return `<div class="col-12 col-xl-4"><section class="card phase-dropzone ${statusClass(totals[p].a)}" data-phase="${p}"><div class="phase-board-header p-3 border-bottom"><div class="d-flex justify-content-between"><h3 class="h4">${p}</h3><span class="badge badge-soft">${items.length}</span></div><div class="phase-value">${fmtA(totals[p].a)}</div><div class="small-muted mb-2">${fmtW(totals[p].w)} gesamt</div><div class="progress"><div class="progress-bar" style="width:${prog}%"></div></div></div><div class="phase-items p-3" data-phase="${p}">${items.length?items.map(renderPlanCard).join(''):'<div class="empty-phase">Geräte hier ablegen</div>'}</div></section></div>`; }).join(''); registerDragAndDrop(); }
+function renderPhaseBoards(){ const totals=phaseTotals(); els.phaseBoards.innerHTML=phases.map(p=>{ const items=plan.filter(i=>Number(i.circuit_id)===Number(activeCircuit)&&i.phase===p); const limit=Number(selectedCircuit()?.amp_limit||16); const prog=Math.min(totals[p].a/limit*100,100); return `<div class="col-12 col-xl-4"><section class="card phase-dropzone ${statusClass(totals[p].a)}" data-phase="${p}"><div class="phase-board-header p-3 border-bottom"><div class="d-flex justify-content-between"><h3 class="h4">${p}</h3><span class="badge badge-soft">${items.length}</span></div><div class="phase-value">${fmtA(totals[p].a)}</div><div class="small-muted mb-2">${fmtW(totals[p].w)} gesamt</div><div class="progress"><div class="progress-bar" style="width:${prog}%"></div></div></div><div class="phase-items p-3" data-phase="${p}">${items.length?items.map(renderPlanCard).join(''):'<div class="empty-phase">Geräte hier ablegen</div>'}</div></section></div>`; }).join(''); registerDragAndDrop(); }
 function renderPlanCard(i){ return `<article class="plan-card" draggable="true" data-id="${i.id}"><div class="d-flex justify-content-between gap-2"><div><strong>${esc(i.brand?i.brand+' · '+i.name:i.name)}</strong><div class="small-muted">Anzahl: ${i.quantity} · ${fmtW(itemWatts(i))}</div>${i.remarks?`<div class="plan-remarks mt-1">${esc(i.remarks)}</div>`:''}</div><button class="btn btn-sm btn-outline-danger" onclick="removeItem(${i.id})">×</button></div><div class="d-flex justify-content-between mt-2"><span class="badge text-bg-dark">${i.phase}</span><span class="fw-semibold">${fmtA(itemAmps(i))}</span></div></article>`; }
-function renderRows(){ planRows.innerHTML=plan.length?plan.map(i=>`<tr><td><strong>${esc(i.name)}</strong><div class="small-muted">${esc(i.category||'-')}</div></td><td>${esc(i.brand||'-')}</td><td><input class="form-control form-control-sm plan-quantity-input" type="number" min="1" value="${i.quantity}" onchange="updateQuantity(${i.id},this.value)"></td><td>${esc(circuitName(i.circuit_id))}</td><td>${i.phase}</td><td>${fmtW(itemWatts(i))}</td><td>${fmtA(itemAmps(i))}</td><td><textarea class="form-control form-control-sm plan-remarks-input" onchange="updateRemarks(${i.id},this.value)">${esc(i.remarks||'')}</textarea></td><td class="text-end"><button class="btn btn-sm btn-outline-danger" onclick="removeItem(${i.id})">Löschen</button></td></tr>`).join(''):'<tr><td colspan="9" class="text-center text-muted py-4">Noch keine Geräte im Plan.</td></tr>'; }
+function renderRows(){ els.planRows.innerHTML=plan.length?plan.map(i=>`<tr><td><strong>${esc(i.name)}</strong><div class="small-muted">${esc(i.category||'-')}</div></td><td>${esc(i.brand||'-')}</td><td><input class="form-control form-control-sm plan-quantity-input" type="number" min="1" value="${i.quantity}" onchange="updateQuantity(${i.id},this.value)"></td><td>${esc(circuitName(i.circuit_id))}</td><td>${i.phase}</td><td>${fmtW(itemWatts(i))}</td><td>${fmtA(itemAmps(i))}</td><td><textarea class="form-control form-control-sm plan-remarks-input" onchange="updateRemarks(${i.id},this.value)">${esc(i.remarks||'')}</textarea></td><td class="text-end"><button class="btn btn-sm btn-outline-danger" onclick="removeItem(${i.id})">Löschen</button></td></tr>`).join(''):'<tr><td colspan="9" class="text-center text-muted py-4">Noch keine Geräte im Plan.</td></tr>'; }
 async function updateQuantity(id,v){ const i=plan.find(x=>Number(x.id)===Number(id)); await savePatch(i,{quantity:Math.max(1,Number(v||1))}); }
 async function updateRemarks(id,v){ const i=plan.find(x=>Number(x.id)===Number(id)); await savePatch(i,{remarks:v}); }
-async function removeItem(id){ await fetch(`${api.items}&id=${id}`,{method:'DELETE'}); await loadAll(); }
+async function removeItem(id){ await fetch(`${api.items}&id=${id}`,{method:'DELETE',credentials:'same-origin'}); await loadAll(); }
 window.updateQuantity=updateQuantity; window.updateRemarks=updateRemarks; window.removeItem=removeItem;
-function renderPrint(){ const totals=phaseTotals(); printSummary.innerHTML=`<div class="print-summary">${phases.map(p=>`<div class="print-summary-card"><div class="print-phase-name">${p}</div>${fmtW(totals[p].w)}<br>${fmtA(totals[p].a)}</div>`).join('')}</div>`; printPhaseTables.innerHTML=circuits.map(c=>`<h2>${esc(c.name)}</h2>`+phases.map(p=>`<h3>${p}</h3><table class="print-table"><tbody>${plan.filter(i=>Number(i.circuit_id)===Number(c.id)&&i.phase===p).map(i=>`<tr><td>${esc(i.name)}</td><td>${i.quantity}</td><td>${fmtW(itemWatts(i))}</td><td>${fmtA(itemAmps(i))}</td></tr>`).join('')||'<tr><td>Keine Geräte</td></tr>'}</tbody></table>`).join('')).join(''); printRows.innerHTML=plan.map(i=>`<tr><td>${esc(i.name)}</td><td>${esc(i.brand||'')}</td><td>${i.quantity}</td><td>${esc(circuitName(i.circuit_id))}</td><td>${i.phase}</td><td>${fmtW(itemWatts(i))}</td><td>${fmtA(itemAmps(i))}</td><td>${esc(i.remarks||'')}</td></tr>`).join(''); }
+function renderPrint(){ const totals=phaseTotals(); els.printSummary.innerHTML=`<div class="print-summary">${phases.map(p=>`<div class="print-summary-card"><div class="print-phase-name">${p}</div>${fmtW(totals[p].w)}<br>${fmtA(totals[p].a)}</div>`).join('')}</div>`; els.printPhaseTables.innerHTML=circuits.map(c=>`<h2>${esc(c.name)}</h2>`+phases.map(p=>`<h3>${p}</h3><table class="print-table"><tbody>${plan.filter(i=>Number(i.circuit_id)===Number(c.id)&&i.phase===p).map(i=>`<tr><td>${esc(i.name)}</td><td>${i.quantity}</td><td>${fmtW(itemWatts(i))}</td><td>${fmtA(itemAmps(i))}</td></tr>`).join('')||'<tr><td>Keine Geräte</td></tr>'}</tbody></table>`).join('')).join(''); els.printRows.innerHTML=plan.map(i=>`<tr><td>${esc(i.name)}</td><td>${esc(i.brand||'')}</td><td>${i.quantity}</td><td>${esc(circuitName(i.circuit_id))}</td><td>${i.phase}</td><td>${fmtW(itemWatts(i))}</td><td>${fmtA(itemAmps(i))}</td><td>${esc(i.remarks||'')}</td></tr>`).join(''); }
 function render(){ renderCircuitSelects(); renderDeviceSelect(); renderPhaseBoards(); renderRows(); renderPrint(); }
 async function loadAll(){ [devices,circuits,plan]=await Promise.all([getJson(api.devices),getJson(api.circuits),getJson(api.items)]); if(!activeCircuit && circuits[0]) activeCircuit=circuits[0].id; renderCategoryFilter(); render(); }
 function registerDragAndDrop(){ document.querySelectorAll('.plan-card').forEach(card=>{ card.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',card.dataset.id); card.classList.add('dragging');}); card.addEventListener('dragend',()=>card.classList.remove('dragging')); }); document.querySelectorAll('.phase-items').forEach(zone=>{ zone.addEventListener('dragover',e=>{e.preventDefault(); zone.closest('.phase-dropzone').classList.add('drag-over');}); zone.addEventListener('dragleave',()=>zone.closest('.phase-dropzone').classList.remove('drag-over')); zone.addEventListener('drop',async e=>{ e.preventDefault(); zone.closest('.phase-dropzone').classList.remove('drag-over'); const id=e.dataTransfer.getData('text/plain'); const i=plan.find(x=>String(x.id)===id); if(i) await savePatch(i,{phase:zone.dataset.phase,circuit_id:activeCircuit}); }); }); }
-loadForm.addEventListener('submit',async e=>{ e.preventDefault(); const d=devices.find(x=>String(x.id)===deviceSelect.value); if(!d){ alert('Bitte Gerät auswählen.'); return; } await fetch(api.items,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device_id:d.id,circuit_id:circuitSelect.value,quantity:quantity.value,phase:phase.value,voltage_v:voltage.value,remarks:remarks.value})}); loadForm.reset(); quantity.value=1; voltage.value=230; deviceSelect.value=''; await loadAll(); });
-activeCircuitSelect.addEventListener('change',()=>{ activeCircuit=activeCircuitSelect.value; render(); }); circuitSelect.addEventListener('change',()=>{ activeCircuit=circuitSelect.value; render(); });
-addCircuit.addEventListener('click',async()=>{ if(!newCircuitName.value.trim())return; await fetch(api.circuits,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:newCircuitName.value})}); newCircuitName.value=''; activeCircuit=null; await loadAll(); });
-deleteCircuit.addEventListener('click',async()=>{ if(!confirm('Stromkreis löschen? Zugeordnete Planpositionen werden entfernt.'))return; const r=await fetch(`${api.circuits}&id=${activeCircuit}`,{method:'DELETE'}); const res=await r.json(); if(!r.ok) alert(res.error); activeCircuit=null; await loadAll(); });
-deviceSearch.addEventListener('input',renderDeviceSelect); categoryFilter.addEventListener('change',renderDeviceSelect);
-exportPdf.addEventListener('click',()=>{ renderPrint(); window.print(); });
-exportCsv.addEventListener('click',()=>{ const rows=[['Gerät','Marke','Anzahl','Stromkreis','Phase','Watt','Ampere','Bemerkung'],...plan.map(i=>[i.name,i.brand,i.quantity,circuitName(i.circuit_id),i.phase,itemWatts(i),itemAmps(i).toFixed(2),i.remarks||''])]; const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n'); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download='stromplan.csv'; a.click(); });
-autoDistribute.addEventListener('click',async()=>{ const current=plan.filter(i=>Number(i.circuit_id)===Number(activeCircuit)); let totals={L1:0,L2:0,L3:0}; for(const i of current.sort((a,b)=>itemWatts(b)-itemWatts(a))){ const phase=phases.reduce((min,p)=>totals[p]<totals[min]?p:min,'L1'); totals[phase]+=itemAmps(i); await fetch(`${api.items}&id=${i.id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({phase})}); } await loadAll(); });
-clearPlan.addEventListener('click',async()=>{ if(confirm('Gesamten Plan leeren?')){ await fetch(`${api.items}&all=1`,{method:'DELETE'}); await loadAll(); }});
+els.loadForm.addEventListener('submit',async e=>{ e.preventDefault(); const d=devices.find(x=>String(x.id)===els.deviceSelect.value); if(!d){ alert('Bitte Gerät auswählen.'); return; } await sendJson(api.items,'POST',{device_id:d.id,circuit_id:els.circuitSelect.value,quantity:els.quantity.value,phase:els.phase.value,voltage_v:els.voltage.value,remarks:els.remarks.value}); els.loadForm.reset(); els.quantity.value=1; els.voltage.value=230; els.deviceSelect.value=''; await loadAll(); });
+els.activeCircuitSelect.addEventListener('change',()=>{ activeCircuit=els.activeCircuitSelect.value; render(); }); els.circuitSelect.addEventListener('change',()=>{ activeCircuit=els.circuitSelect.value; render(); });
+async function createCircuit(){
+  const name = els.newCircuitName.value.trim();
+  if(!name){ els.newCircuitName.focus(); return; }
+  els.addCircuit.disabled = true;
+  try {
+    const res = await sendJson(api.circuits, 'POST', {name});
+    els.newCircuitName.value = '';
+    activeCircuit = res.id || null;
+    await loadAll();
+  } catch(err) {
+    alert('Stromkreis konnte nicht angelegt werden: ' + err.message);
+  } finally {
+    els.addCircuit.disabled = false;
+  }
+}
+els.addCircuit.addEventListener('click', createCircuit);
+els.newCircuitName.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); createCircuit(); } });
+els.deleteCircuit.addEventListener('click',async()=>{ if(!confirm('Stromkreis löschen? Zugeordnete Planpositionen werden entfernt.'))return; const r=await fetch(`${api.circuits}&id=${activeCircuit}`,{method:'DELETE',credentials:'same-origin'}); const res=await r.json(); if(!r.ok){ alert(res.error); return; } activeCircuit=null; await loadAll(); });
+els.deviceSearch.addEventListener('input',renderDeviceSelect); els.categoryFilter.addEventListener('change',renderDeviceSelect);
+els.exportPdf.addEventListener('click',()=>{ renderPrint(); window.print(); });
+els.exportCsv.addEventListener('click',()=>{ const rows=[['Gerät','Marke','Anzahl','Stromkreis','Phase','Watt','Ampere','Bemerkung'],...plan.map(i=>[i.name,i.brand,i.quantity,circuitName(i.circuit_id),i.phase,itemWatts(i),itemAmps(i).toFixed(2),i.remarks||''])]; const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n'); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download='stromplan.csv'; a.click(); });
+els.autoDistribute.addEventListener('click',async()=>{ const current=plan.filter(i=>Number(i.circuit_id)===Number(activeCircuit)); let totals={L1:0,L2:0,L3:0}; for(const i of current.sort((a,b)=>itemWatts(b)-itemWatts(a))){ const phase=phases.reduce((min,p)=>totals[p]<totals[min]?p:min,'L1'); totals[phase]+=itemAmps(i); await sendJson(`${api.items}&id=${i.id}`,'PATCH',{phase}); } await loadAll(); });
+els.clearPlan.addEventListener('click',async()=>{ if(confirm('Gesamten Plan leeren?')){ await fetch(`${api.items}&all=1`,{method:'DELETE',credentials:'same-origin'}); await loadAll(); }});
 loadAll();
