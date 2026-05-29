@@ -217,13 +217,6 @@ require __DIR__ . '/inc/header.php';
                 <div class="d-flex gap-2 flex-wrap justify-content-end">
                   <a class="btn btn-sm btn-outline-primary" href="<?= e(app_url('project?id=' . (int)$p['id'])) ?>">Öffnen</a>
                   <form method="post" class="d-inline"><input type="hidden" name="action" value="duplicate"><input type="hidden" name="project_id" value="<?= (int)$p['id'] ?>"><button class="btn btn-sm btn-outline-secondary">Duplizieren</button></form>
-                  <?php if ((int)$p['is_owner'] !== 1): ?>
-                    <form method="post" class="d-inline" data-confirm="Diese Freigabe wird für dich entfernt. Das Projekt verschwindet aus deiner Projektliste." data-confirm-title="Freigabe entfernen" data-confirm-button="Entfernen">
-                      <input type="hidden" name="action" value="leave_share">
-                      <input type="hidden" name="project_id" value="<?= (int)$p['id'] ?>">
-                      <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-x-circle me-1"></i>Freigabe entfernen</button>
-                    </form>
-                  <?php endif; ?>
                 </div>
               </div>
               <?php if ((int)$p['is_owner'] === 1): ?>
@@ -271,9 +264,6 @@ require __DIR__ . '/inc/header.php';
                 <a class="btn btn-sm btn-outline-primary" href="<?= e(app_url('project?id=' . (int)$p['id'])) ?>">Öffnen</a>
                 <?php if (project_can_manage_archived($p)): ?>
                   <form method="post" class="d-inline"><input type="hidden" name="action" value="unarchive"><input type="hidden" name="project_id" value="<?= (int)$p['id'] ?>"><button class="btn btn-sm btn-outline-success">Reaktivieren</button></form>
-                <?php endif; ?>
-                <?php if ((int)$p['is_owner'] !== 1): ?>
-                  <form method="post" class="d-inline" data-confirm="Diese Freigabe wird für dich entfernt. Das Projekt verschwindet aus deiner Projektliste." data-confirm-title="Freigabe entfernen" data-confirm-button="Entfernen"><input type="hidden" name="action" value="leave_share"><input type="hidden" name="project_id" value="<?= (int)$p['id'] ?>"><button class="btn btn-sm btn-outline-danger">Freigabe entfernen</button></form>
                 <?php endif; ?>
               </td>
             </tr>
