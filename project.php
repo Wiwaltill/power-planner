@@ -5,6 +5,7 @@ $projectId = (int)($_GET['id'] ?? 0);
 $project = user_project($projectId, (int)$user['id']);
 if (!$project) { header('Location: projects'); exit; }
 $isOwner = (int)($project['is_owner'] ?? 0) === 1;
+$isArchived = project_is_archived($project);
 $canEdit = project_can_edit($project);
 $canManage = project_can_manage($project);
 $canOwner = project_is_owner($project);
@@ -115,14 +116,14 @@ if ($canManage) {
 $companyLogo = setting_get('company_logo');
 $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageScript = 'assets/js/app.js'; require __DIR__ . '/inc/header.php';
 ?>
-<script>window.APP_PROJECT_ID = <?= (int)$project['id'] ?>; window.APP_CAN_EDIT = <?= $canEdit ? 'true' : 'false' ?>;</script>
+<script>window.APP_PROJECT_ID = <?= (int)$project['id'] ?>; window.APP_CAN_EDIT = <?= $canEdit ? 'true' : 'false' ?>; window.APP_PROJECT_ARCHIVED = <?= $isArchived ? 'true' : 'false' ?>;</script>
 <main class="container py-4 flex-grow-1">
   <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-4">
     <div><h1 class="h3 mb-1"><?= e($project['name']) ?></h1><div class="small-muted"><?= e($project['client'] ?: 'Kein Kunde') ?> · <?= e($project['technician'] ?: 'Kein Techniker') ?></div></div>
     <a href="<?= e(app_url('projects')) ?>" class="btn btn-outline-secondary">Zur Projektliste</a>
   </div>
   <?php if (!$isOwner): ?><div class="alert alert-info">Dieses Projekt wurde von <?= e($project['owner_name'] ?? '') ?> mit dir geteilt. Berechtigung: <?= e(project_permission_label($project['permission'] ?? 'view')) ?>.</div><?php endif; ?>
-  <?php if (!$canEdit): ?><div class="alert alert-warning">Du hast nur Leserechte. Änderungen sind gesperrt.</div><?php endif; ?>
+  <?php if ($isArchived): ?><div class="alert alert-warning"><i class="bi bi-archive me-2"></i>Dieses Projekt ist archiviert und schreibgeschützt. Reaktiviere es in der Projektübersicht, um Änderungen vorzunehmen.</div><?php elseif (!$canEdit): ?><div class="alert alert-warning">Du hast nur Leserechte. Änderungen sind gesperrt.</div><?php endif; ?>
   <?php if ($shareMessage): ?><div class="alert alert-success"><?= e($shareMessage) ?></div><?php endif; ?>
   <?php if ($shareError): ?><div class="alert alert-danger"><?= e($shareError) ?></div><?php endif; ?>
   <?php if (isset($_GET['imported'])): ?><div class="alert alert-success">Projekt wurde erfolgreich importiert.</div><?php endif; ?>

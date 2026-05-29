@@ -1,6 +1,6 @@
 <?php
 if (!defined('APP_GITHUB_URL')) { define('APP_GITHUB_URL', 'https://github.com/Wiwaltill/power-planner/'); }
-if (!defined('APP_VERSION')) { define('APP_VERSION', '1.5.0'); }
+if (!defined('APP_VERSION')) { define('APP_VERSION', '1.5.1'); }
 function e($value): string { return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8'); }
 function json_response($data, int $status = 200): void {
     http_response_code($status);
@@ -18,10 +18,18 @@ function user_project(int $projectId, int $userId, bool $includeDeleted = false)
     $stmt->execute([$userId, $userId, $userId, $projectId, $userId]);
     return $stmt->fetch() ?: null;
 }
+function project_is_archived(array $project): bool {
+    return !empty($project['archived_at']);
+}
 function project_can_edit(array $project): bool {
+    if (project_is_archived($project)) return false;
     return (int)($project['is_owner'] ?? 0) === 1 || in_array(($project['permission'] ?? ''), ['edit','manage'], true);
 }
 function project_can_manage(array $project): bool {
+    if (project_is_archived($project)) return false;
+    return (int)($project['is_owner'] ?? 0) === 1 || ($project['permission'] ?? '') === 'manage';
+}
+function project_can_manage_archived(array $project): bool {
     return (int)($project['is_owner'] ?? 0) === 1 || ($project['permission'] ?? '') === 'manage';
 }
 function project_is_owner(array $project): bool {
@@ -157,18 +165,24 @@ function github_repo_from_url(string $url): string {
 function http_get_json_cached(string $url, int $timeout = 10): ?array {
     $headers = [
         'User-Agent: Power-Planner-Updater/' . APP_VERSION,
-        'Accept: application/vnd.github+json'
+        'Accept: application/vnd.github+json, application/json',
+        'X-GitHub-Api-Version: 2022-11-28'
     ];
     $body = false;
     if (function_exists('curl_init')) {
         $ch = curl_init($url);
-        curl_setopt_array($ch, [
+        $opts = [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_CONNECTTIMEOUT => $timeout,
             CURLOPT_TIMEOUT => $timeout,
             CURLOPT_HTTPHEADER => $headers,
-        ]);
+            CURLOPT_USERAGENT => 'PowerPlanner-Updater/' . APP_VERSION,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
+        ];
+        if (defined('CURLOPT_IPRESOLVE')) { $opts[CURLOPT_IPRESOLVE] = CURL_IPRESOLVE_V4; }
+        curl_setopt_array($ch, $opts);
         $body = curl_exec($ch);
         $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);

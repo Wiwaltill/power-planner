@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'unarchive') {
         $projectId = (int)($_POST['project_id'] ?? 0);
         $project = user_project($projectId, (int)$user['id'], true);
-        if ($project && project_can_manage($project)) {
+        if ($project && project_can_manage_archived($project)) {
             db()->prepare('UPDATE projects SET archived_at = NULL WHERE id = ?')->execute([$projectId]);
             header('Location: projects?unarchived=1'); exit;
         }

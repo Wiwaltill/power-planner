@@ -34,8 +34,8 @@ function import_csv_devices(string $path): int {
             'name' => $name,
             'brand' => $assoc['brand'] ?? $assoc['marke'] ?? '',
             'category' => $assoc['category'] ?? $assoc['kategorie'] ?? '',
-            'power_w' => $assoc['power_w'] ?? $assoc['leistung'] ?? $assoc['watt'] ?? 0,
-            'voltage_v' => $assoc['voltage_v'] ?? $assoc['spannung'] ?? 230,
+            'power_w' => $assoc['power_w'] ?? $assoc['leistung w'] ?? $assoc['leistung'] ?? $assoc['watt'] ?? 0,
+            'voltage_v' => $assoc['voltage_v'] ?? $assoc['spannung v'] ?? $assoc['spannung'] ?? 230,
             'connector' => $assoc['connector'] ?? $assoc['anschluss'] ?? '',
             'notes' => $assoc['notes'] ?? $assoc['notizen'] ?? '',
         ];
@@ -47,6 +47,18 @@ function import_csv_devices(string $path): int {
     }
     fclose($fh);
     return $count;
+}
+
+
+if ($method === 'GET' && isset($_GET['csv_template'])) {
+    $filename = 'geraete-import-vorlage.csv';
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    echo "Name;Marke;Kategorie;Leistung W;Spannung V;Anschluss;Notizen
+";
+    echo "LED PAR Beispiel;Beispielmarke;LED;120;230;Schuko;Optionaler Hinweis
+";
+    exit;
 }
 
 if ($method === 'GET') {
