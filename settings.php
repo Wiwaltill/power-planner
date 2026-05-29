@@ -1,7 +1,8 @@
 <?php
 require_once __DIR__ . '/inc/auth.php';
 require_once __DIR__ . '/inc/helpers.php';
-$user = require_admin();
+$user = require_login();
+if (($user['role'] ?? '') !== 'admin') { header('Location: profile'); exit; }
 ensure_schema();
 $message = '';
 $error = '';

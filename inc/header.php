@@ -34,8 +34,11 @@ function app_url(string $path = ''): string {
         <?php if ($user): ?>
           <li class="nav-item"><a class="nav-link<?= nav_active('projects', $activePage) ?>" href="<?= e(app_url('projects')) ?>"><i class="bi bi-folder2-open me-1"></i>Projekte</a></li>
           <li class="nav-item"><a class="nav-link<?= nav_active('devices', $activePage) ?>" href="<?= e(app_url('devices')) ?>"><i class="bi bi-lightning-charge me-1"></i>Geräte</a></li>
-          <li class="nav-item"><a class="nav-link<?= nav_active('settings', $activePage) ?>" href="<?= e(app_url('settings')) ?>"><i class="bi bi-gear me-1"></i>Einstellungen</a></li>
-          <?php if (($user['role'] ?? '') === 'admin'): ?><li class="nav-item"><a class="nav-link<?= nav_active('users', $activePage) ?>" href="<?= e(app_url('users')) ?>"><i class="bi bi-people me-1"></i>Nutzer</a></li><?php endif; ?>
+          <?php if (($user['role'] ?? '') === 'admin'): ?>
+            <li class="nav-item"><a class="nav-link<?= nav_active('settings', $activePage) ?>" href="<?= e(app_url('settings')) ?>"><i class="bi bi-gear me-1"></i>Einstellungen</a></li>
+            <li class="nav-item"><a class="nav-link<?= nav_active('users', $activePage) ?>" href="<?= e(app_url('users')) ?>"><i class="bi bi-people me-1"></i>Nutzer</a></li>
+          <?php endif; ?>
+          <li class="nav-item"><a class="nav-link<?= nav_active('profile', $activePage) ?>" href="<?= e(app_url('profile')) ?>"><i class="bi bi-person-circle me-1"></i>Profil</a></li>
           <li class="nav-item"><span class="nav-link disabled"><?= e($user['name']) ?></span></li>
           <li class="nav-item"><a class="nav-link" href="<?= e(app_url('logout')) ?>"><i class="bi bi-box-arrow-right me-1"></i>Logout</a></li>
         <?php else: ?>
