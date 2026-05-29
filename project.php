@@ -92,7 +92,9 @@ $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageSc
       <hr><div class="d-flex gap-2 flex-wrap">
         <button class="btn btn-outline-primary btn-sm flex-fill" id="exportPdf" type="button">PDF exportieren</button>
         <a class="btn btn-outline-success btn-sm flex-fill" id="exportExcel" href="<?= e(app_url('export-excel?id=' . (int)$project['id'])) ?>">Excel exportieren</a>
-        <?php if ($isOwner && !empty($project['public_share_enabled']) && !empty($project['public_share_token'])): ?><a class="btn btn-outline-info btn-sm flex-fill" target="_blank" href="<?= e(app_url('public-project?token=' . urlencode($project['public_share_token']))) ?>">Web-Link öffnen</a><?php endif; ?>
+        <?php if ($isOwner && !empty($project['public_share_enabled']) && !empty($project['public_share_token'])): ?>
+          <button class="btn btn-outline-info btn-sm flex-fill copy-public-link" type="button" data-link="<?= e(app_url('public-project?token=' . urlencode($project['public_share_token']))) ?>"><i class="bi bi-clipboard me-1"></i>Web-Link kopieren</button>
+        <?php endif; ?>
         <button class="btn btn-outline-secondary btn-sm flex-fill" id="exportCsv" type="button">CSV exportieren</button>
         <button class="btn btn-outline-warning btn-sm flex-fill" id="autoDistribute" type="button">Automatisch verteilen</button>
         <button class="btn btn-outline-danger btn-sm flex-fill" id="clearPlan" type="button">Plan leeren</button>
@@ -108,8 +110,8 @@ $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageSc
     <?php if (!empty($project['public_share_enabled']) && !empty($project['public_share_token'])): ?>
       <label class="form-label">Öffentlicher Link</label>
       <div class="input-group mb-3">
-        <input class="form-control" readonly value="<?= e(app_url('public-project?token=' . urlencode($project['public_share_token']))) ?>" onclick="this.select()">
-        <a class="btn btn-outline-primary" target="_blank" href="<?= e(app_url('public-project?token=' . urlencode($project['public_share_token']))) ?>">Öffnen</a>
+        <input class="form-control" id="publicShareUrl" readonly value="<?= e(app_url('public-project?token=' . urlencode($project['public_share_token']))) ?>" onclick="this.select()">
+        <button class="btn btn-outline-primary copy-public-link" type="button" data-link="<?= e(app_url('public-project?token=' . urlencode($project['public_share_token']))) ?>"><i class="bi bi-clipboard me-1"></i>Kopieren</button>
       </div>
       <div class="d-flex gap-2 flex-wrap">
         <form method="post"><input type="hidden" name="action" value="disable_public_share"><button class="btn btn-outline-danger">Web-Link deaktivieren</button></form>
@@ -154,4 +156,28 @@ $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageSc
   <?php endif; ?>
   <section id="printArea" class="print-area"><div class="print-header"><div class="print-title-wrap"><?php if ($companyLogo): ?><img class="print-logo" src="<?= e(app_url($companyLogo)) ?>" alt="Firmenlogo"><?php endif; ?><div><h1>Stromplan Übersicht</h1><p><?= e($project['name']) ?> · <?= e($project['client']) ?></p></div></div><div class="print-meta"><?= date('d.m.Y') ?></div></div><div id="printSummary"></div><div id="printPhaseTables"></div><table class="print-table"><thead><tr><th>Gerät</th><th>Marke</th><th>Anzahl</th><th>Stromkreis</th><th>Phase</th><th>Leistung</th><th>Strom</th><th>Bemerkung</th></tr></thead><tbody id="printRows"></tbody></table></section>
 </main>
+<script>
+document.addEventListener('click', async function (event) {
+  const button = event.target.closest('.copy-public-link');
+  if (!button) return;
+  const link = button.dataset.link || document.getElementById('publicShareUrl')?.value || '';
+  if (!link) return;
+  try {
+    await navigator.clipboard.writeText(link);
+    if (window.AppUI && typeof window.AppUI.toast === 'function') {
+      window.AppUI.toast('Web-Link wurde in die Zwischenablage kopiert.', 'success');
+    } else {
+      button.textContent = 'Kopiert';
+      setTimeout(() => { button.innerHTML = '<i class="bi bi-clipboard me-1"></i>Kopieren'; }, 1600);
+    }
+  } catch (e) {
+    const input = document.getElementById('publicShareUrl');
+    if (input) { input.focus(); input.select(); }
+    if (window.AppUI && typeof window.AppUI.toast === 'function') {
+      window.AppUI.toast('Kopieren nicht möglich. Bitte den Link manuell markieren.', 'warning');
+    }
+  }
+});
+</script>
+
 <?php require __DIR__ . '/inc/footer.php'; ?>
