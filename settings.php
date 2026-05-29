@@ -114,7 +114,7 @@ require __DIR__ . '/inc/header.php';
     </div>
 
     <div class="col-12">
-      <div class="card p-4 border-success border-2">
+      <div class="card p-4 border-success border-2" id="updater">
         <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center">
           <div>
             <h2 class="h4 mb-1"><i class="bi bi-cloud-arrow-down me-2"></i>Updater</h2>

@@ -10,6 +10,18 @@
     </a>
     <span class="d-none d-md-inline">·</span>
     <span>Version <?= e(APP_VERSION) ?></span>
+    <?php if (($user ?? null) && (($user['role'] ?? '') === 'admin')): ?>
+      <?php $availableUpdate = available_update_info(); ?>
+      <?php if ($availableUpdate): ?>
+        <span class="d-none d-md-inline">·</span>
+        <a class="badge text-bg-warning text-decoration-none" href="<?= e(app_url('settings#updater')) ?>" title="Zur Updater-Seite">
+          <i class="bi bi-exclamation-triangle me-1"></i>Update verfügbar: <?= e($availableUpdate['tag_name']) ?>
+        </a>
+      <?php else: ?>
+        <span class="d-none d-md-inline">·</span>
+        <span class="badge text-bg-success"><i class="bi bi-check-circle me-1"></i>Aktuell</span>
+      <?php endif; ?>
+    <?php endif; ?>
   </div>
 </footer>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
