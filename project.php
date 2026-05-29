@@ -93,7 +93,7 @@ $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageSc
         <button class="btn btn-outline-primary btn-sm flex-fill" id="exportPdf" type="button">PDF exportieren</button>
         <a class="btn btn-outline-success btn-sm flex-fill" id="exportExcel" href="<?= e(app_url('export-excel?id=' . (int)$project['id'])) ?>">Excel exportieren</a>
         <?php if ($isOwner && !empty($project['public_share_enabled']) && !empty($project['public_share_token'])): ?>
-          <button class="btn btn-outline-info btn-sm flex-fill copy-public-link" type="button" data-link="<?= e(app_url('public-project?token=' . urlencode($project['public_share_token']))) ?>"><i class="bi bi-clipboard me-1"></i>Web-Link kopieren</button>
+          <button class="btn btn-outline-info btn-sm flex-fill copy-public-link" type="button" data-link="<?= e(app_full_url('public-project?token=' . urlencode($project['public_share_token']))) ?>"><i class="bi bi-clipboard me-1"></i>Web-Link kopieren</button>
         <?php endif; ?>
         <button class="btn btn-outline-secondary btn-sm flex-fill" id="exportCsv" type="button">CSV exportieren</button>
         <button class="btn btn-outline-warning btn-sm flex-fill" id="autoDistribute" type="button">Automatisch verteilen</button>
@@ -110,8 +110,8 @@ $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageSc
     <?php if (!empty($project['public_share_enabled']) && !empty($project['public_share_token'])): ?>
       <label class="form-label">Öffentlicher Link</label>
       <div class="input-group mb-3">
-        <input class="form-control" id="publicShareUrl" readonly value="<?= e(app_url('public-project?token=' . urlencode($project['public_share_token']))) ?>" onclick="this.select()">
-        <button class="btn btn-outline-primary copy-public-link" type="button" data-link="<?= e(app_url('public-project?token=' . urlencode($project['public_share_token']))) ?>"><i class="bi bi-clipboard me-1"></i>Kopieren</button>
+        <input class="form-control" id="publicShareUrl" readonly value="<?= e(app_full_url('public-project?token=' . urlencode($project['public_share_token']))) ?>" onclick="this.select()">
+        <button class="btn btn-outline-primary copy-public-link" type="button" data-link="<?= e(app_full_url('public-project?token=' . urlencode($project['public_share_token']))) ?>"><i class="bi bi-clipboard me-1"></i>Kopieren</button>
       </div>
       <div class="d-flex gap-2 flex-wrap">
         <form method="post"><input type="hidden" name="action" value="disable_public_share"><button class="btn btn-outline-danger">Web-Link deaktivieren</button></form>

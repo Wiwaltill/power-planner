@@ -12,6 +12,11 @@ function app_url(string $path = ''): string {
     global $basePath;
     return ($basePath === '' ? '' : $basePath) . '/' . ltrim($path, '/');
 }
+function app_full_url(string $path = ''): string {
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    return $scheme . '://' . $host . app_url($path);
+}
 ?>
 <!doctype html>
 <html lang="de">
