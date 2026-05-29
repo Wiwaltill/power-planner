@@ -45,20 +45,6 @@ require __DIR__ . '/inc/header.php';
   <?php if ($error): ?><div class="alert alert-danger"><?= e($error) ?></div><?php endif; ?>
   <div class="row g-4">
     <div class="col-12">
-      <div class="card p-4 border-primary border-2">
-        <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center">
-          <div>
-            <h2 class="h4 mb-1"><i class="bi bi-shield-check me-2"></i>Backup</h2>
-            <p class="small text-muted mb-0">Alle Projekte, Geräte, Nutzer, Einstellungen und Uploads als ZIP sichern oder wiederherstellen.</p>
-          </div>
-          <div class="d-flex flex-column flex-sm-row gap-2">
-            <a class="btn btn-success" href="<?= e(app_url('backup')) ?>"><i class="bi bi-download me-1"></i>Backup herunterladen</a>
-            <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#restoreBackupModal"><i class="bi bi-upload me-1"></i>Backup wiederherstellen</button>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="col-12">
       <div class="card p-4">
         <h2 class="h4">Firmenlogo</h2>
         <p class="small text-muted mb-3">Dieses Logo wird zentral gespeichert und im PDF-Export angezeigt.</p>
@@ -110,6 +96,20 @@ require __DIR__ . '/inc/header.php';
           <button class="btn btn-primary">Hinzufügen</button>
         </form>
         <div id="connectorRows" class="list-group"></div>
+      </div>
+    </div>
+    <div class="col-12">
+      <div class="card p-4 border-primary border-2">
+        <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center">
+          <div>
+            <h2 class="h4 mb-1"><i class="bi bi-shield-check me-2"></i>Backup</h2>
+            <p class="small text-muted mb-0">Alle Projekte, Geräte, Nutzer, Einstellungen und Uploads als ZIP sichern oder wiederherstellen.</p>
+          </div>
+          <div class="d-flex flex-column flex-sm-row gap-2">
+            <a class="btn btn-success" href="<?= e(app_url('backup')) ?>"><i class="bi bi-download me-1"></i>Backup herunterladen</a>
+            <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#restoreBackupModal"><i class="bi bi-upload me-1"></i>Backup wiederherstellen</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

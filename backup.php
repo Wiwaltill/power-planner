@@ -13,6 +13,7 @@ $backupTables = [
     'device_connectors',
     'devices',
     'projects',
+    'project_shares',
     'circuits',
     'plan_items',
     'app_settings',

@@ -1,6 +1,6 @@
 <?php
 if (!defined('APP_GITHUB_URL')) { define('APP_GITHUB_URL', 'https://github.com/Wiwaltill/power-planner/'); }
-if (!defined('APP_VERSION')) { define('APP_VERSION', '1.2.6'); }
+if (!defined('APP_VERSION')) { define('APP_VERSION', '1.2.7'); }
 function e($value): string { return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8'); }
 function json_response($data, int $status = 200): void {
     http_response_code($status);
@@ -13,9 +13,14 @@ function request_json(): array {
     return is_array($data) ? $data : [];
 }
 function user_project(int $projectId, int $userId): ?array {
-    $stmt = db()->prepare('SELECT * FROM projects WHERE id = ? AND user_id = ?');
-    $stmt->execute([$projectId, $userId]);
+    $stmt = db()->prepare('SELECT p.*, u.name AS owner_name, u.email AS owner_email, CASE WHEN p.user_id = ? THEN 1 ELSE 0 END AS is_owner FROM projects p JOIN users u ON u.id = p.user_id LEFT JOIN project_shares ps ON ps.project_id = p.id AND ps.user_id = ? WHERE p.id = ? AND (p.user_id = ? OR ps.user_id IS NOT NULL) LIMIT 1');
+    $stmt->execute([$userId, $userId, $projectId, $userId]);
     return $stmt->fetch() ?: null;
+}
+function user_owns_project(int $projectId, int $userId): bool {
+    $stmt = db()->prepare('SELECT COUNT(*) FROM projects WHERE id = ? AND user_id = ?');
+    $stmt->execute([$projectId, $userId]);
+    return (int)$stmt->fetchColumn() > 0;
 }
 function setting_get(string $key, string $default = ''): string {
     try {
