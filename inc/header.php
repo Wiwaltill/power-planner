@@ -22,6 +22,7 @@ function app_url(string $path = ''): string {
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="<?= e(app_url('assets/css/style.css')) ?>" rel="stylesheet">
   <script>window.APP_BASE_PATH = <?= json_encode($basePath, JSON_UNESCAPED_SLASHES) ?>;</script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 <body class="d-flex flex-column min-vh-100">
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -31,14 +32,14 @@ function app_url(string $path = ''): string {
     <div class="collapse navbar-collapse" id="nav">
       <ul class="navbar-nav ms-auto">
         <?php if ($user): ?>
-          <li class="nav-item"><a class="nav-link<?= nav_active('projects', $activePage) ?>" href="<?= e(app_url('projects')) ?>">Projekte</a></li>
-          <li class="nav-item"><a class="nav-link<?= nav_active('devices', $activePage) ?>" href="<?= e(app_url('devices')) ?>">Geräte</a></li>
-          <li class="nav-item"><a class="nav-link<?= nav_active('settings', $activePage) ?>" href="<?= e(app_url('settings')) ?>">Einstellungen</a></li>
-          <?php if (($user['role'] ?? '') === 'admin'): ?><li class="nav-item"><a class="nav-link<?= nav_active('users', $activePage) ?>" href="<?= e(app_url('users')) ?>">Nutzer</a></li><?php endif; ?>
+          <li class="nav-item"><a class="nav-link<?= nav_active('projects', $activePage) ?>" href="<?= e(app_url('projects')) ?>"><i class="bi bi-folder2-open me-1"></i>Projekte</a></li>
+          <li class="nav-item"><a class="nav-link<?= nav_active('devices', $activePage) ?>" href="<?= e(app_url('devices')) ?>"><i class="bi bi-lightning-charge me-1"></i>Geräte</a></li>
+          <li class="nav-item"><a class="nav-link<?= nav_active('settings', $activePage) ?>" href="<?= e(app_url('settings')) ?>"><i class="bi bi-gear me-1"></i>Einstellungen</a></li>
+          <?php if (($user['role'] ?? '') === 'admin'): ?><li class="nav-item"><a class="nav-link<?= nav_active('users', $activePage) ?>" href="<?= e(app_url('users')) ?>"><i class="bi bi-people me-1"></i>Nutzer</a></li><?php endif; ?>
           <li class="nav-item"><span class="nav-link disabled"><?= e($user['name']) ?></span></li>
-          <li class="nav-item"><a class="nav-link" href="<?= e(app_url('logout')) ?>">Logout</a></li>
+          <li class="nav-item"><a class="nav-link" href="<?= e(app_url('logout')) ?>"><i class="bi bi-box-arrow-right me-1"></i>Logout</a></li>
         <?php else: ?>
-          <li class="nav-item"><a class="nav-link<?= nav_active('login', $activePage) ?>" href="<?= e(app_url('login')) ?>">Login</a></li>
+          <li class="nav-item"><a class="nav-link<?= nav_active('login', $activePage) ?>" href="<?= e(app_url('login')) ?>"><i class="bi bi-box-arrow-in-right me-1"></i>Login</a></li>
         <?php endif; ?>
       </ul>
     </div>
