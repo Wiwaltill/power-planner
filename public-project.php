@@ -31,6 +31,14 @@ foreach ($items as $item) {
         $summary[$cid][$phase] += ((int)$item['power_w']) * ((int)$item['quantity']);
     }
 }
+$itemsByCircuitPhase = [];
+foreach ($items as $item) {
+    $cid = (int)$item['circuit_id'];
+    $phase = (string)$item['phase'];
+    if (!isset($itemsByCircuitPhase[$cid])) { $itemsByCircuitPhase[$cid] = ['L1' => [], 'L2' => [], 'L3' => []]; }
+    if (!isset($itemsByCircuitPhase[$cid][$phase])) { $itemsByCircuitPhase[$cid][$phase] = []; }
+    $itemsByCircuitPhase[$cid][$phase][] = $item;
+}
 $companyLogo = setting_get('company_logo');
 $pageTitle = $project['name'] . ' · Öffentliche Ansicht'; $activePage = '';
 require __DIR__ . '/inc/header.php';
@@ -42,7 +50,7 @@ require __DIR__ . '/inc/header.php';
       <h1 class="h3 mb-1"><?= e($project['name']) ?></h1>
       <div class="text-muted"><?= e($project['client'] ?: 'Kein Kunde') ?> · <?= e($project['technician'] ?: 'Kein Techniker') ?></div>
     </div>
-    <button class="btn btn-outline-primary" onclick="window.print()"><i class="bi bi-printer me-1"></i>Drucken / PDF</button>
+    <button class="btn btn-outline-primary" type="button" onclick="window.print()"><i class="bi bi-printer me-1"></i>Drucken / PDF</button>
   </div>
 
   <div class="card p-4 mb-4">
@@ -92,5 +100,72 @@ require __DIR__ . '/inc/header.php';
       </table>
     </div>
   </div>
+
+  <section id="printArea" class="print-area">
+    <div class="print-header">
+      <div class="print-title-wrap">
+        <?php if ($companyLogo): ?><img class="print-logo" src="<?= e(app_url($companyLogo)) ?>" alt="Firmenlogo"><?php endif; ?>
+        <div>
+          <h1>Stromplan Übersicht</h1>
+          <p><?= e($project['name']) ?> · <?= e($project['client'] ?: 'Kein Kunde') ?></p>
+        </div>
+      </div>
+      <div class="print-meta"><?= date('d.m.Y') ?></div>
+    </div>
+
+    <?php foreach ($circuits as $c): $cid = (int)$c['id']; $row = $summary[$cid] ?? ['L1'=>0,'L2'=>0,'L3'=>0]; ?>
+      <div class="print-summary-card">
+        <div class="print-phase-name"><?= e($c['name']) ?></div>
+        <table class="print-table">
+          <thead><tr><th>L1</th><th>L2</th><th>L3</th></tr></thead>
+          <tbody><tr>
+            <td><?= number_format((float)$row['L1'], 0, ',', '.') ?> W / <?= number_format(((float)$row['L1']) / 230, 2, ',', '.') ?> A</td>
+            <td><?= number_format((float)$row['L2'], 0, ',', '.') ?> W / <?= number_format(((float)$row['L2']) / 230, 2, ',', '.') ?> A</td>
+            <td><?= number_format((float)$row['L3'], 0, ',', '.') ?> W / <?= number_format(((float)$row['L3']) / 230, 2, ',', '.') ?> A</td>
+          </tr></tbody>
+        </table>
+      </div>
+      <?php foreach (['L1','L2','L3'] as $phase): $phaseItems = $itemsByCircuitPhase[$cid][$phase] ?? []; ?>
+        <?php if ($phaseItems): ?>
+          <h2 class="print-section-title"><?= e($c['name']) ?> · <?= e($phase) ?></h2>
+          <table class="print-table">
+            <thead><tr><th>Gerät</th><th>Marke</th><th>Anzahl</th><th>Leistung</th><th>Strom</th><th>Bemerkung</th></tr></thead>
+            <tbody>
+            <?php foreach ($phaseItems as $item): $totalW = (int)$item['power_w'] * (int)$item['quantity']; $voltage = max(1, (int)$item['voltage_v']); ?>
+              <tr>
+                <td><?= e($item['name']) ?></td>
+                <td><?= e($item['brand']) ?></td>
+                <td><?= (int)$item['quantity'] ?></td>
+                <td><?= number_format($totalW, 0, ',', '.') ?> W</td>
+                <td><?= number_format($totalW / $voltage, 2, ',', '.') ?> A</td>
+                <td><?= nl2br(e($item['remarks'])) ?></td>
+              </tr>
+            <?php endforeach; ?>
+            </tbody>
+          </table>
+        <?php endif; ?>
+      <?php endforeach; ?>
+    <?php endforeach; ?>
+
+    <h2 class="print-section-title">Gesamtliste</h2>
+    <table class="print-table">
+      <thead><tr><th>Gerät</th><th>Marke</th><th>Anzahl</th><th>Stromkreis</th><th>Phase</th><th>Leistung</th><th>Strom</th><th>Bemerkung</th></tr></thead>
+      <tbody>
+        <?php foreach ($items as $item): $totalW = (int)$item['power_w'] * (int)$item['quantity']; $voltage = max(1, (int)$item['voltage_v']); ?>
+          <tr>
+            <td><?= e($item['name']) ?></td>
+            <td><?= e($item['brand']) ?></td>
+            <td><?= (int)$item['quantity'] ?></td>
+            <td><?= e($item['circuit_name']) ?></td>
+            <td><?= e($item['phase']) ?></td>
+            <td><?= number_format($totalW, 0, ',', '.') ?> W</td>
+            <td><?= number_format($totalW / $voltage, 2, ',', '.') ?> A</td>
+            <td><?= nl2br(e($item['remarks'])) ?></td>
+          </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </section>
+
 </main>
 <?php require __DIR__ . '/inc/footer.php'; ?>

@@ -49,6 +49,8 @@ body { background: var(--app-bg); }
   .print-table { width: 100%; border-collapse: collapse; margin-bottom: .45rem; }
   .print-table th, .print-table td { border: 1px solid #333; padding: .16rem .24rem; vertical-align: top; line-height: 1.2; }
   .print-table th { background: #efefef !important; font-weight: 700; }
+  .print-section-title { font-size: 10.5pt; margin: .35rem 0 .18rem; font-weight: 800; }
+  .print-summary-card { margin-bottom: .35rem; }
 }
 @media print {
   .print-title-wrap { display: flex; align-items: flex-start; gap: .6rem; }
