@@ -193,7 +193,7 @@ require __DIR__ . '/inc/header.php';
                   <form method="post" class="d-inline"><input type="hidden" name="action" value="duplicate"><input type="hidden" name="project_id" value="<?= (int)$p['id'] ?>"><button class="btn btn-sm btn-outline-secondary">Duplizieren</button></form>
                   <?php if (project_can_manage($p)): ?><form method="post" class="d-inline" data-confirm="Projekt archivieren?" data-confirm-title="Projekt archivieren" data-confirm-button="Archivieren"><input type="hidden" name="action" value="archive"><input type="hidden" name="project_id" value="<?= (int)$p['id'] ?>"><button class="btn btn-sm btn-outline-warning">Archivieren</button></form><?php endif; ?>
                   <?php if ((int)$p['is_owner'] === 1): ?>
-                    <button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteProjectModal<?= (int)$p['id'] ?>">Löschen</button>
+                    
                   <?php endif; ?>
                 </div>
               </div>
