@@ -84,14 +84,36 @@ window.updateQuantity=updateQuantity; window.updateRemarks=updateRemarks; window
 
 function renderProjectMetrics(){
   const totalWatts = plan.reduce((sum,i)=>sum+itemWatts(i),0);
-  const totalsAll={L1:{w:0,a:0},L2:{w:0,a:0},L3:{w:0,a:0}};
-  plan.forEach(i=>{ if(totalsAll[i.phase]){ totalsAll[i.phase].w += itemWatts(i); totalsAll[i.phase].a += itemAmps(i); } });
-  const maxPhase = phases.reduce((max,p)=>totalsAll[p].a>totalsAll[max].a?p:max,'L1');
-  if(els.metricCircuits) els.metricCircuits.textContent = circuits.length.toLocaleString('de-DE');
+  const usedCircuitIds = new Set(plan.map(i=>Number(i.circuit_id)).filter(Boolean));
+  const circuitPhaseTotals = [];
+
+  circuits.forEach(circuit => {
+    phases.forEach(phase => {
+      const items = plan.filter(i=>Number(i.circuit_id)===Number(circuit.id) && i.phase===phase);
+      const watts = items.reduce((sum,i)=>sum+itemWatts(i),0);
+      const amps = items.reduce((sum,i)=>sum+itemAmps(i),0);
+      if(items.length){
+        circuitPhaseTotals.push({ circuit, phase, watts, amps, items: items.length });
+      }
+    });
+  });
+
+  circuitPhaseTotals.sort((a,b)=>b.amps-a.amps);
+  const peak = circuitPhaseTotals[0] || null;
+
+  if(els.metricCircuits){
+    const used = usedCircuitIds.size.toLocaleString('de-DE');
+    const total = circuits.length.toLocaleString('de-DE');
+    els.metricCircuits.textContent = circuits.length ? `${used} / ${total}` : '0';
+  }
   if(els.metricItems) els.metricItems.textContent = plan.length.toLocaleString('de-DE');
   if(els.metricWatts) els.metricWatts.textContent = fmtW(totalWatts);
-  if(els.metricMaxPhase) els.metricMaxPhase.textContent = `${maxPhase} · ${fmtA(totalsAll[maxPhase].a)}`;
-  if(els.metricPhaseBalance) els.metricPhaseBalance.innerHTML = phases.map(p=>`<div class="d-flex justify-content-between"><span>${p}</span><strong>${fmtA(totalsAll[p].a)} · ${fmtW(totalsAll[p].w)}</strong></div>`).join('');
+  if(els.metricMaxPhase) els.metricMaxPhase.textContent = peak ? `${esc(peak.circuit.name)} ${peak.phase} · ${fmtA(peak.amps)}` : '–';
+  if(els.metricPhaseBalance){
+    els.metricPhaseBalance.innerHTML = circuitPhaseTotals.length
+      ? `<div class="fw-semibold mb-1">Höchste Stromkreis-Phasen</div>` + circuitPhaseTotals.slice(0,3).map(entry=>`<div class="d-flex justify-content-between gap-3"><span>${esc(entry.circuit.name)} ${entry.phase}</span><strong>${fmtA(entry.amps)} · ${fmtW(entry.watts)}</strong></div>`).join('')
+      : '<span class="text-muted">Noch keine Lasten im Projekt.</span>';
+  }
 }
 function renderProjectDevices(){
   if(!els.projectDeviceRows) return;
