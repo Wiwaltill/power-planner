@@ -17,6 +17,14 @@ function app_full_url(string $path = ''): string {
     $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
     return $scheme . '://' . $host . app_url($path);
 }
+function app_asset_url(string $path = ''): string {
+    $url = app_url($path);
+    $file = dirname(__DIR__) . '/' . ltrim($path, '/');
+    if (is_file($file)) {
+        $url .= (str_contains($url, '?') ? '&' : '?') . 'v=' . filemtime($file);
+    }
+    return $url;
+}
 ?>
 <!doctype html>
 <html lang="de">
@@ -25,7 +33,7 @@ function app_full_url(string $path = ''): string {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= e($pageTitle) ?></title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="<?= e(app_url('assets/css/style.css')) ?>" rel="stylesheet">
+  <link href="<?= e(app_asset_url('assets/css/style.css')) ?>" rel="stylesheet">
   <script>window.APP_BASE_PATH = <?= json_encode($basePath, JSON_UNESCAPED_SLASHES) ?>;</script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
