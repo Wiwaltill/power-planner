@@ -7,10 +7,15 @@ if (!$project) { header('Location: projects'); exit; }
 $isOwner = (int)($project['is_owner'] ?? 0) === 1;
 $canEdit = project_can_edit($project);
 $canManage = project_can_manage($project);
+$canOwner = project_is_owner($project);
 $shareMessage = '';
 $shareError = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManage) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
+    $manageActions = ['share_project','unshare_project','update_share_permission','enable_public_share','disable_public_share','regenerate_public_share'];
+    $ownerActions = ['transfer_owner'];
+    if (in_array($action, $manageActions, true) && !$canManage) { $shareError = 'Keine Verwaltungsrechte für dieses Projekt.'; $action = ''; }
+    if (in_array($action, $ownerActions, true) && !$canOwner) { $shareError = 'Nur der Besitzer darf diese Aktion ausführen.'; $action = ''; }
     if ($action === 'share_project') {
         $shareUserId = (int)($_POST['share_user_id'] ?? 0);
         if ($shareUserId > 0 && $shareUserId !== (int)$user['id']) {
@@ -40,6 +45,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManage) {
         log_project_activity($projectId, (int)$user['id'], 'Freigaberecht geändert', 'Share-ID ' . $shareId . ' / ' . $permission);
         $shareMessage = 'Freigaberecht wurde geändert.';
     }
+    if ($action === 'transfer_owner') {
+        $newOwnerId = (int)($_POST['new_owner_id'] ?? 0);
+        if ($newOwnerId > 0 && $newOwnerId !== (int)$user['id']) {
+            $stmt = db()->prepare('SELECT id FROM users WHERE id = ? AND active = 1 LIMIT 1');
+            $stmt->execute([$newOwnerId]);
+            if ((int)$stmt->fetchColumn() === $newOwnerId) {
+                $pdo = db();
+                $pdo->beginTransaction();
+                try {
+                    $pdo->prepare('UPDATE projects SET user_id = ? WHERE id = ?')->execute([$newOwnerId, $projectId]);
+                    $pdo->prepare('DELETE FROM project_shares WHERE project_id = ? AND user_id = ?')->execute([$projectId, $newOwnerId]);
+                    $pdo->prepare('INSERT INTO project_shares (project_id, user_id, permission) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE permission = VALUES(permission)')->execute([$projectId, (int)$user['id'], 'manage']);
+                    $pdo->commit();
+                    log_project_activity($projectId, (int)$user['id'], 'Besitzer übertragen', 'Neue Nutzer-ID ' . $newOwnerId);
+                    header('Location: project?id=' . $projectId); exit;
+                } catch (Throwable $e) {
+                    if ($pdo->inTransaction()) { $pdo->rollBack(); }
+                    $shareError = 'Besitzer konnte nicht übertragen werden.';
+                }
+            } else {
+                $shareError = 'Bitte einen gültigen neuen Besitzer auswählen.';
+            }
+        } else {
+            $shareError = 'Bitte einen anderen Nutzer als neuen Besitzer auswählen.';
+        }
+    }
     if ($action === 'enable_public_share') {
         $token = $project['public_share_token'] ?? '';
         if (!$token) { $token = generate_share_token(); }
@@ -64,12 +95,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManage) {
 }
 $shareUsers = [];
 $availableShareUsers = [];
-if ($isOwner) {
+if ($canManage) {
     $stmt = db()->prepare('SELECT ps.id AS share_id, ps.permission, u.id, u.name, u.email FROM project_shares ps JOIN users u ON u.id = ps.user_id WHERE ps.project_id = ? ORDER BY u.name, u.email');
     $stmt->execute([$projectId]);
     $shareUsers = $stmt->fetchAll();
-    $stmt = db()->prepare('SELECT u.id, u.name, u.email FROM users u WHERE u.id <> ? AND u.active = 1 AND NOT EXISTS (SELECT 1 FROM project_shares ps WHERE ps.project_id = ? AND ps.user_id = u.id) ORDER BY u.name, u.email');
-    $stmt->execute([(int)$user['id'], $projectId]);
+    $stmt = db()->prepare('SELECT u.id, u.name, u.email FROM users u WHERE u.id <> ? AND u.id <> ? AND u.active = 1 AND NOT EXISTS (SELECT 1 FROM project_shares ps WHERE ps.project_id = ? AND ps.user_id = u.id) ORDER BY u.name, u.email');
+    $stmt->execute([(int)$user['id'], (int)$project['user_id'], $projectId]);
     $availableShareUsers = $stmt->fetchAll();
 }
 $activityStmt = db()->prepare('SELECT a.*, u.name AS user_name FROM project_activity a LEFT JOIN users u ON u.id = a.user_id WHERE a.project_id = ? ORDER BY a.created_at DESC LIMIT 25');
@@ -84,7 +115,7 @@ $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageSc
     <div><h1 class="h3 mb-1"><?= e($project['name']) ?></h1><div class="small-muted"><?= e($project['client'] ?: 'Kein Kunde') ?> · <?= e($project['technician'] ?: 'Kein Techniker') ?></div></div>
     <a href="<?= e(app_url('projects')) ?>" class="btn btn-outline-secondary">Zur Projektliste</a>
   </div>
-  <?php if (!$isOwner): ?><div class="alert alert-info">Dieses Projekt wurde von <?= e($project['owner_name'] ?? '') ?> mit dir geteilt. Berechtigung: <?= e(($project['permission'] ?? 'view') === 'edit' ? 'bearbeiten' : (($project['permission'] ?? 'view') === 'manage' ? 'verwalten' : 'ansehen')) ?>.</div><?php endif; ?>
+  <?php if (!$isOwner): ?><div class="alert alert-info">Dieses Projekt wurde von <?= e($project['owner_name'] ?? '') ?> mit dir geteilt. Berechtigung: <?= e(project_permission_label($project['permission'] ?? 'view')) ?>.</div><?php endif; ?>
   <?php if (!$canEdit): ?><div class="alert alert-warning">Du hast nur Leserechte. Änderungen sind gesperrt.</div><?php endif; ?>
   <?php if ($shareMessage): ?><div class="alert alert-success"><?= e($shareMessage) ?></div><?php endif; ?>
   <?php if ($shareError): ?><div class="alert alert-danger"><?= e($shareError) ?></div><?php endif; ?>
@@ -113,7 +144,7 @@ $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageSc
         <button class="btn btn-outline-primary btn-sm flex-fill" id="exportPdf" type="button">PDF exportieren</button>
         <a class="btn btn-outline-success btn-sm flex-fill" id="exportExcel" href="<?= e(app_url('export-excel?id=' . (int)$project['id'])) ?>">Excel exportieren</a>
         <a class="btn btn-outline-dark btn-sm flex-fill" href="<?= e(app_url('project-export?id=' . (int)$project['id'])) ?>"><i class="bi bi-download me-1"></i>Projekt exportieren</a>
-        <?php if ($isOwner && !empty($project['public_share_enabled']) && !empty($project['public_share_token'])): ?>
+        <?php if ($canManage && !empty($project['public_share_enabled']) && !empty($project['public_share_token'])): ?>
           <button class="btn btn-outline-info btn-sm flex-fill copy-public-link" type="button" data-link="<?= e(app_full_url('public-project?token=' . urlencode($project['public_share_token']))) ?>"><i class="bi bi-clipboard me-1"></i>Web-Link kopieren</button>
         <?php endif; ?>
         <button class="btn btn-outline-secondary btn-sm flex-fill" id="exportCsv" type="button">CSV exportieren</button>
@@ -124,7 +155,7 @@ $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageSc
     <div class="col-lg-8"><div class="d-flex justify-content-between align-items-end mb-3"><div><h2 class="h4 mb-0">Phasenplaner</h2><div class="small-muted">Geräte im aktiven Stromkreis per Drag & Drop zwischen L1 bis L3 verschieben.</div></div></div><div class="row g-3" id="phaseBoards"></div></div>
   </div>
   <div class="card p-4 mt-4"><h2 class="h4 mb-3">Aktueller Stromplan</h2><div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>Gerät</th><th>Marke</th><th>Anzahl</th><th>Stromkreis</th><th>Phase</th><th>Leistung</th><th>Strom</th><th>Bemerkungen</th><th></th></tr></thead><tbody id="planRows"></tbody></table></div></div>
-  <?php if ($isOwner): ?>
+  <?php if ($canManage): ?>
   <div class="card p-4 mt-4">
     <h2 class="h4 mb-3"><i class="bi bi-globe2 me-2"></i>Web-URL teilen</h2>
     <p class="text-muted">Erstellt einen öffentlichen Nur-Lese-Link. Der Link funktioniert ohne Anmeldung.</p>
@@ -184,6 +215,16 @@ $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageSc
           </div>
         <?php endforeach; ?>
       </div>
+    <?php endif; ?>
+    <?php if ($canOwner): ?>
+      <hr>
+      <h3 class="h5 mb-3"><i class="bi bi-person-check me-2"></i>Besitzer übertragen</h3>
+      <p class="text-muted small">Nur der aktuelle Besitzer kann den Besitz übertragen. Du bleibst anschließend mit Verwaltungsrechten im Projekt.</p>
+      <form method="post" class="row g-3 align-items-end" data-confirm="Besitz dieses Projekts wirklich übertragen?" data-confirm-title="Besitzer übertragen" data-confirm-button="Übertragen">
+        <input type="hidden" name="action" value="transfer_owner">
+        <div class="col-md-8"><label class="form-label">Neuer Besitzer</label><select class="form-select" name="new_owner_id" required><option value="">Bitte wählen...</option><?php foreach (array_merge($shareUsers, $availableShareUsers) as $ownerCandidate): ?><option value="<?= (int)$ownerCandidate['id'] ?>"><?= e($ownerCandidate['name']) ?> &lt;<?= e($ownerCandidate['email']) ?>&gt;</option><?php endforeach; ?></select></div>
+        <div class="col-md-4"><button class="btn btn-outline-warning w-100">Besitz übertragen</button></div>
+      </form>
     <?php endif; ?>
   </div>
   <?php endif; ?>

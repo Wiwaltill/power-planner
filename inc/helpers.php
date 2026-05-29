@@ -1,6 +1,6 @@
 <?php
 if (!defined('APP_GITHUB_URL')) { define('APP_GITHUB_URL', 'https://github.com/Wiwaltill/power-planner/'); }
-if (!defined('APP_VERSION')) { define('APP_VERSION', '1.4.0'); }
+if (!defined('APP_VERSION')) { define('APP_VERSION', '1.4.1'); }
 function e($value): string { return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8'); }
 function json_response($data, int $status = 200): void {
     http_response_code($status);
@@ -23,6 +23,15 @@ function project_can_edit(array $project): bool {
 }
 function project_can_manage(array $project): bool {
     return (int)($project['is_owner'] ?? 0) === 1 || ($project['permission'] ?? '') === 'manage';
+}
+function project_is_owner(array $project): bool {
+    return (int)($project['is_owner'] ?? 0) === 1 || ($project['permission'] ?? '') === 'owner';
+}
+function project_permission_label(?string $permission): string {
+    if ($permission === 'owner') return 'Besitzer';
+    if ($permission === 'manage') return 'Verwalten';
+    if ($permission === 'edit') return 'Bearbeiten';
+    return 'Ansehen';
 }
 function require_project_access(int $projectId, int $userId, string $level = 'view'): array {
     $project = user_project($projectId, $userId);

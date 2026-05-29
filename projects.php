@@ -117,7 +117,7 @@ require __DIR__ . '/inc/header.php';
                 <a class="text-decoration-none text-reset flex-grow-1" href="<?= e(app_url('project?id=' . (int)$p['id'])) ?>">
                   <div class="d-flex flex-wrap gap-2 align-items-center">
                     <strong><?= e($p['name']) ?></strong>
-                    <?php if ((int)$p['is_owner'] !== 1): ?><span class="badge text-bg-info">geteilt</span><span class="badge text-bg-secondary"><?= e($p['permission'] === 'edit' ? 'bearbeiten' : ($p['permission'] === 'manage' ? 'verwalten' : 'ansehen')) ?></span><?php endif; ?>
+                    <?php if ((int)$p['is_owner'] !== 1): ?><span class="badge text-bg-info">geteilt</span><span class="badge text-bg-secondary"><?= e(project_permission_label($p['permission'] ?? 'view')) ?></span><?php endif; ?>
                   </div>
                   <span class="small-muted d-block"><?= e($p['client'] ?: 'Kein Kunde') ?> · <?= (int)$p['circuits'] ?> Stromkreis(e) · <?= (int)$p['items'] ?> Position(en)</span>
                   <?php if ((int)$p['is_owner'] !== 1): ?><span class="small text-muted d-block">Besitzer: <?= e($p['owner_name']) ?> &lt;<?= e($p['owner_email']) ?>&gt;</span><?php endif; ?>
