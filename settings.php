@@ -112,6 +112,20 @@ require __DIR__ . '/inc/header.php';
         </div>
       </div>
     </div>
+
+    <div class="col-12">
+      <div class="card p-4 border-success border-2">
+        <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center">
+          <div>
+            <h2 class="h4 mb-1"><i class="bi bi-cloud-arrow-down me-2"></i>Updater</h2>
+            <p class="small text-muted mb-0">Prüft GitHub Releases und installiert verfügbare Updates. Lokale Konfiguration, Uploads und Backups bleiben erhalten.</p>
+          </div>
+          <div>
+            <a class="btn btn-success" href="<?= e(app_url('updater')) ?>"><i class="bi bi-arrow-repeat me-1"></i>Updates prüfen</a>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </main>
 
