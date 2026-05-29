@@ -69,24 +69,22 @@ require __DIR__ . '/inc/header.php';
         <?php if (!$projects): ?>
           <p class="text-muted mb-0">Noch keine Projekte vorhanden.</p>
         <?php else: ?>
-          <div class="list-group">
+          <div class="list-group list-group-flush">
             <?php foreach ($projects as $p): ?>
-              <div class="list-group-item">
-                <div class="d-flex flex-column flex-md-row justify-content-between gap-3 align-items-md-center">
-                  <div>
-                    <div class="d-flex flex-wrap gap-2 align-items-center">
-                      <a class="fw-semibold text-decoration-none" href="<?= e(app_url('project?id=' . (int)$p['id'])) ?>"><?= e($p['name']) ?></a>
-                      <?php if ((int)$p['is_owner'] !== 1): ?><span class="badge text-bg-info">geteilt</span><?php endif; ?>
-                    </div>
-                    <div class="small text-muted"><?= e($p['client'] ?: 'Kein Kunde') ?> · <?= (int)$p['circuits'] ?> Stromkreis(e) · <?= (int)$p['items'] ?> Position(en)</div>
-                    <?php if ((int)$p['is_owner'] !== 1): ?><div class="small text-muted">Besitzer: <?= e($p['owner_name']) ?> &lt;<?= e($p['owner_email']) ?>&gt;</div><?php endif; ?>
+              <div class="list-group-item d-flex flex-wrap gap-3 justify-content-between align-items-center">
+                <a class="text-decoration-none text-reset flex-grow-1" href="<?= e(app_url('project?id=' . (int)$p['id'])) ?>">
+                  <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <strong><?= e($p['name']) ?></strong>
+                    <?php if ((int)$p['is_owner'] !== 1): ?><span class="badge text-bg-info">geteilt</span><?php endif; ?>
                   </div>
-                  <div class="d-flex gap-2">
-                    <a class="btn btn-sm btn-outline-primary" href="<?= e(app_url('project?id=' . (int)$p['id'])) ?>">Öffnen</a>
-                    <?php if ((int)$p['is_owner'] === 1): ?>
-                      <button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteProjectModal<?= (int)$p['id'] ?>">Löschen</button>
-                    <?php endif; ?>
-                  </div>
+                  <span class="small-muted d-block"><?= e($p['client'] ?: 'Kein Kunde') ?> · <?= (int)$p['circuits'] ?> Stromkreis(e) · <?= (int)$p['items'] ?> Position(en)</span>
+                  <?php if ((int)$p['is_owner'] !== 1): ?><span class="small text-muted d-block">Besitzer: <?= e($p['owner_name']) ?> &lt;<?= e($p['owner_email']) ?>&gt;</span><?php endif; ?>
+                </a>
+                <div class="d-flex gap-2">
+                  <a class="btn btn-sm btn-outline-primary" href="<?= e(app_url('project?id=' . (int)$p['id'])) ?>">Öffnen</a>
+                  <?php if ((int)$p['is_owner'] === 1): ?>
+                    <button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteProjectModal<?= (int)$p['id'] ?>">Löschen</button>
+                  <?php endif; ?>
                 </div>
               </div>
               <?php if ((int)$p['is_owner'] === 1): ?>

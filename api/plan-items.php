@@ -20,8 +20,8 @@ if ($method === 'POST') {
     $deviceId = (int)($data['device_id'] ?? 0);
     $device = null;
     if ($deviceId > 0) {
-        $stmt = $pdo->prepare('SELECT id, name, brand, category, power_w, voltage_v FROM devices WHERE id = ? AND user_id = ?');
-        $stmt->execute([$deviceId, (int)$user['id']]);
+        $stmt = $pdo->prepare('SELECT id, name, brand, category, power_w, voltage_v FROM devices WHERE id = ?');
+        $stmt->execute([$deviceId]);
         $device = $stmt->fetch();
         if (!$device) json_response(['error' => 'Gerät nicht gefunden.'], 404);
     }

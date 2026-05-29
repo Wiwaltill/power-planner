@@ -19,8 +19,8 @@ function normalize_device(array $data): array {
 }
 
 if ($method === 'GET') {
-    $stmt = $pdo->prepare('SELECT id, user_id, name, brand, category, power_w, voltage_v, connector, notes FROM devices WHERE user_id = ? ORDER BY brand, name');
-    $stmt->execute([(int)$user['id']]);
+    $stmt = $pdo->prepare('SELECT id, user_id, name, brand, category, power_w, voltage_v, connector, notes FROM devices ORDER BY brand, name');
+    $stmt->execute();
     $devices = $stmt->fetchAll();
     if (isset($_GET['export'])) {
         header('Content-Type: application/json; charset=utf-8');
@@ -54,11 +54,11 @@ if ($method === 'POST') {
     if ($d['name'] === '') json_response(['error' => 'Name fehlt.'], 422);
 
     if ($id > 0) {
-        $stmt = $pdo->prepare('UPDATE devices SET name = ?, brand = ?, category = ?, power_w = ?, voltage_v = ?, connector = ?, notes = ? WHERE id = ? AND user_id = ?');
-        $stmt->execute([$d['name'], $d['brand'], $d['category'], $d['power_w'], $d['voltage_v'], $d['connector'], $d['notes'], $id, (int)$user['id']]);
+        $stmt = $pdo->prepare('UPDATE devices SET name = ?, brand = ?, category = ?, power_w = ?, voltage_v = ?, connector = ?, notes = ? WHERE id = ?');
+        $stmt->execute([$d['name'], $d['brand'], $d['category'], $d['power_w'], $d['voltage_v'], $d['connector'], $d['notes'], $id]);
         if ($stmt->rowCount() === 0) {
-            $check = $pdo->prepare('SELECT id FROM devices WHERE id = ? AND user_id = ?');
-            $check->execute([$id, (int)$user['id']]);
+            $check = $pdo->prepare('SELECT id FROM devices WHERE id = ?');
+            $check->execute([$id]);
             if (!$check->fetch()) json_response(['error' => 'Gerät nicht gefunden.'], 404);
         }
     } else {
@@ -72,8 +72,8 @@ if ($method === 'POST') {
 if ($method === 'DELETE') {
     $id = (int)($_GET['id'] ?? 0);
     if ($id <= 0) json_response(['error' => 'ID fehlt.'], 422);
-    $stmt = $pdo->prepare('DELETE FROM devices WHERE id = ? AND user_id = ?');
-    $stmt->execute([$id, (int)$user['id']]);
+    $stmt = $pdo->prepare('DELETE FROM devices WHERE id = ?');
+    $stmt->execute([$id]);
     json_response(['ok' => true]);
 }
 

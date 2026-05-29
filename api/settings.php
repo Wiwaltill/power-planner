@@ -8,17 +8,17 @@ $method = $_SERVER['REQUEST_METHOD'];
 $type = $_GET['type'] ?? 'all';
 $tables = ['brands' => 'device_brands', 'categories' => 'device_categories', 'connectors' => 'device_connectors'];
 
-function list_values(PDO $pdo, int $userId, string $table): array {
-    $stmt = $pdo->prepare("SELECT id, name FROM {$table} WHERE user_id = ? ORDER BY name");
-    $stmt->execute([$userId]);
+function list_values(PDO $pdo, string $table): array {
+    $stmt = $pdo->prepare("SELECT id, name FROM {$table} ORDER BY name");
+    $stmt->execute();
     return $stmt->fetchAll();
 }
 
 if ($method === 'GET') {
     json_response([
-        'brands' => list_values($pdo, (int)$user['id'], 'device_brands'),
-        'categories' => list_values($pdo, (int)$user['id'], 'device_categories'),
-        'connectors' => list_values($pdo, (int)$user['id'], 'device_connectors'),
+        'brands' => list_values($pdo, 'device_brands'),
+        'categories' => list_values($pdo, 'device_categories'),
+        'connectors' => list_values($pdo, 'device_connectors'),
     ]);
 }
 
@@ -43,8 +43,8 @@ if ($method === 'PATCH') {
     $name = trim((string)($data['name'] ?? ''));
     if ($id <= 0 || $name === '') json_response(['error' => 'ID oder Name fehlt.'], 422);
     try {
-        $stmt = $pdo->prepare("UPDATE {$table} SET name = ? WHERE id = ? AND user_id = ?");
-        $stmt->execute([$name, $id, (int)$user['id']]);
+        $stmt = $pdo->prepare("UPDATE {$table} SET name = ? WHERE id = ?");
+        $stmt->execute([$name, $id]);
         json_response(['ok' => true]);
     } catch (PDOException $e) {
         json_response(['error' => 'Eintrag existiert bereits.'], 422);
@@ -54,8 +54,8 @@ if ($method === 'PATCH') {
 if ($method === 'DELETE') {
     $id = (int)($_GET['id'] ?? 0);
     if ($id <= 0) json_response(['error' => 'ID fehlt.'], 422);
-    $stmt = $pdo->prepare("DELETE FROM {$table} WHERE id = ? AND user_id = ?");
-    $stmt->execute([$id, (int)$user['id']]);
+    $stmt = $pdo->prepare("DELETE FROM {$table} WHERE id = ?");
+    $stmt->execute([$id]);
     json_response(['ok' => true]);
 }
 
