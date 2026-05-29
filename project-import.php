@@ -90,7 +90,6 @@ try {
     }
 
     $pdo->commit();
-    log_project_activity((int)$newProjectId, (int)$user['id'], 'Projekt importiert', $projectName);
     header('Location: project?id=' . $newProjectId . '&imported=1');
     exit;
 } catch (Throwable $e) {

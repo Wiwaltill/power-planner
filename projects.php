@@ -15,7 +15,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($project && (int)($project['is_owner'] ?? 0) === 1 && hash_equals((string)$project['name'], $confirm)) {
             try {
                 db()->prepare('UPDATE projects SET deleted_at = NOW(), deleted_by = ? WHERE id = ? AND user_id = ?')->execute([(int)$user['id'], $projectId, (int)$user['id']]);
-                log_project_activity($projectId, (int)$user['id'], 'Projekt in Papierkorb verschoben');
                 header('Location: projects?deleted=1'); exit;
             } catch (Throwable $e) {
                 header('Location: projects?delete_error=1'); exit;
@@ -30,7 +29,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $project = user_project($projectId, (int)$user['id'], true);
         if ($project && (int)($project['is_owner'] ?? 0) === 1) {
             db()->prepare('UPDATE projects SET deleted_at = NULL, deleted_by = NULL WHERE id = ? AND user_id = ?')->execute([$projectId, (int)$user['id']]);
-            log_project_activity($projectId, (int)$user['id'], 'Projekt wiederhergestellt');
             header('Location: projects?restored=1'); exit;
         }
         header('Location: projects?delete_error=1'); exit;
@@ -47,7 +45,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->prepare('DELETE FROM plan_items WHERE project_id = ?')->execute([$projectId]);
                 $pdo->prepare('DELETE FROM circuits WHERE project_id = ?')->execute([$projectId]);
                 $pdo->prepare('DELETE FROM project_shares WHERE project_id = ?')->execute([$projectId]);
-                $pdo->prepare('DELETE FROM project_activity WHERE project_id = ?')->execute([$projectId]);
                 $pdo->prepare('DELETE FROM projects WHERE id = ? AND user_id = ?')->execute([$projectId, (int)$user['id']]);
                 $pdo->commit();
                 header('Location: projects?purged=1'); exit;
@@ -64,7 +61,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([(int)$user['id'], $name, trim($_POST['client'] ?? ''), trim($_POST['technician'] ?? '')]);
         $projectId = (int)db()->lastInsertId();
         db()->prepare('INSERT INTO circuits (project_id, name, amp_limit) VALUES (?, ?, 16.00)')->execute([$projectId, 'Standard-Stromkreis']);
-        log_project_activity($projectId, (int)$user['id'], 'Projekt erstellt');
         header('Location: project?id=' . $projectId); exit;
     }
 }

@@ -23,7 +23,6 @@ if ($method === 'POST') {
     if ($name === '') json_response(['error' => 'Name fehlt.'], 422);
     $stmt = $pdo->prepare('INSERT INTO circuits (project_id, name, amp_limit) VALUES (?, ?, ?)');
     $stmt->execute([$projectId, $name, $ampLimit > 0 ? $ampLimit : 16]);
-    log_project_activity($projectId, (int)$user['id'], 'Stromkreis angelegt', $name);
     json_response(['ok' => true, 'id' => (int)$pdo->lastInsertId()]);
 }
 
@@ -35,7 +34,6 @@ if ($method === 'DELETE') {
     if ((int)$stmt->fetchColumn() <= 1) json_response(['error' => 'Der letzte Stromkreis kann nicht gelöscht werden.'], 422);
     $stmt = $pdo->prepare('DELETE FROM circuits WHERE id = ? AND project_id = ?');
     $stmt->execute([$id, $projectId]);
-    log_project_activity($projectId, (int)$user['id'], 'Stromkreis gelöscht', 'ID ' . $id);
     json_response(['ok' => true]);
 }
 

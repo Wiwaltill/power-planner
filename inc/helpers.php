@@ -1,6 +1,6 @@
 <?php
 if (!defined('APP_GITHUB_URL')) { define('APP_GITHUB_URL', 'https://github.com/Wiwaltill/power-planner/'); }
-if (!defined('APP_VERSION')) { define('APP_VERSION', '1.4.1'); }
+if (!defined('APP_VERSION')) { define('APP_VERSION', '1.4.2'); }
 function e($value): string { return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8'); }
 function json_response($data, int $status = 200): void {
     http_response_code($status);
@@ -39,13 +39,6 @@ function require_project_access(int $projectId, int $userId, string $level = 'vi
     if ($level === 'edit' && !project_can_edit($project)) json_response(['error' => 'Nur Leserechte für dieses Projekt.'], 403);
     if ($level === 'manage' && !project_can_manage($project)) json_response(['error' => 'Keine Verwaltungsrechte für dieses Projekt.'], 403);
     return $project;
-}
-function log_project_activity(int $projectId, int $userId, string $action, string $details = ''): void {
-    try {
-        ensure_schema();
-        $stmt = db()->prepare('INSERT INTO project_activity (project_id, user_id, action, details) VALUES (?, ?, ?, ?)');
-        $stmt->execute([$projectId, $userId, $action, $details]);
-    } catch (Throwable $e) {}
 }
 function user_owns_project(int $projectId, int $userId): bool {
     $stmt = db()->prepare('SELECT COUNT(*) FROM projects WHERE id = ? AND user_id = ?');

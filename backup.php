@@ -17,7 +17,6 @@ $backupTables = [
     'circuits',
     'plan_items',
     'app_settings',
-    'project_activity',
     'schema_migrations',
 ];
 

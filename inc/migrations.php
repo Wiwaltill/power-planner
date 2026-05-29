@@ -98,14 +98,7 @@ function ensure_schema(): void {
     if (table_exists($pdo, 'project_shares') && !column_exists($pdo, 'project_shares', 'permission')) {
         $pdo->exec("ALTER TABLE project_shares ADD permission ENUM('view','edit','manage') NOT NULL DEFAULT 'view'");
     }
-    $pdo->exec("CREATE TABLE IF NOT EXISTS project_activity (
-        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        project_id INT UNSIGNED NOT NULL,
-        user_id INT UNSIGNED NULL,
-        action VARCHAR(100) NOT NULL,
-        details TEXT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_project_activity_project (project_id),
-        INDEX idx_project_activity_user (user_id)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    if (table_exists($pdo, 'project_activity')) {
+        $pdo->exec("DROP TABLE project_activity");
+    }
 }

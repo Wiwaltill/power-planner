@@ -23,7 +23,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $permission = in_array(($_POST['permission'] ?? 'view'), ['view','edit','manage'], true) ? $_POST['permission'] : 'view';
                 $stmt = db()->prepare('INSERT INTO project_shares (project_id, user_id, permission) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE permission = VALUES(permission)');
                 $stmt->execute([$projectId, $shareUserId, $permission]);
-                log_project_activity($projectId, (int)$user['id'], 'Projekt geteilt', 'Nutzer-ID ' . $shareUserId . ' / ' . $permission);
                 $shareMessage = 'Projekt wurde geteilt.';
             } catch (Throwable $e) {
                 $shareError = 'Projekt konnte nicht geteilt werden.';
@@ -35,14 +34,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'unshare_project') {
         $shareId = (int)($_POST['share_id'] ?? 0);
         db()->prepare('DELETE FROM project_shares WHERE id = ? AND project_id = ?')->execute([$shareId, $projectId]);
-        log_project_activity($projectId, (int)$user['id'], 'Freigabe entfernt', 'Share-ID ' . $shareId);
         $shareMessage = 'Freigabe wurde entfernt.';
     }
     if ($action === 'update_share_permission') {
         $shareId = (int)($_POST['share_id'] ?? 0);
         $permission = in_array(($_POST['permission'] ?? 'view'), ['view','edit','manage'], true) ? $_POST['permission'] : 'view';
         db()->prepare('UPDATE project_shares SET permission = ? WHERE id = ? AND project_id = ?')->execute([$permission, $shareId, $projectId]);
-        log_project_activity($projectId, (int)$user['id'], 'Freigaberecht geändert', 'Share-ID ' . $shareId . ' / ' . $permission);
         $shareMessage = 'Freigaberecht wurde geändert.';
     }
     if ($action === 'transfer_owner') {
@@ -58,7 +55,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $pdo->prepare('DELETE FROM project_shares WHERE project_id = ? AND user_id = ?')->execute([$projectId, $newOwnerId]);
                     $pdo->prepare('INSERT INTO project_shares (project_id, user_id, permission) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE permission = VALUES(permission)')->execute([$projectId, (int)$user['id'], 'manage']);
                     $pdo->commit();
-                    log_project_activity($projectId, (int)$user['id'], 'Besitzer übertragen', 'Neue Nutzer-ID ' . $newOwnerId);
                     header('Location: project?id=' . $projectId); exit;
                 } catch (Throwable $e) {
                     if ($pdo->inTransaction()) { $pdo->rollBack(); }
@@ -76,20 +72,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$token) { $token = generate_share_token(); }
         db()->prepare('UPDATE projects SET public_share_token = ?, public_share_enabled = 1 WHERE id = ?')->execute([$token, $projectId]);
         $project = user_project($projectId, (int)$user['id']);
-        log_project_activity($projectId, (int)$user['id'], 'Web-Freigabe aktiviert');
         $shareMessage = 'Web-Freigabe wurde aktiviert.';
     }
     if ($action === 'disable_public_share') {
         db()->prepare('UPDATE projects SET public_share_enabled = 0 WHERE id = ?')->execute([$projectId]);
         $project = user_project($projectId, (int)$user['id']);
-        log_project_activity($projectId, (int)$user['id'], 'Web-Freigabe deaktiviert');
         $shareMessage = 'Web-Freigabe wurde deaktiviert.';
     }
     if ($action === 'regenerate_public_share') {
         $token = generate_share_token();
         db()->prepare('UPDATE projects SET public_share_token = ?, public_share_enabled = 1 WHERE id = ?')->execute([$token, $projectId]);
         $project = user_project($projectId, (int)$user['id']);
-        log_project_activity($projectId, (int)$user['id'], 'Web-Link neu erstellt');
         $shareMessage = 'Web-Link wurde neu erstellt.';
     }
 }
@@ -103,9 +96,6 @@ if ($canManage) {
     $stmt->execute([(int)$user['id'], (int)$project['user_id'], $projectId]);
     $availableShareUsers = $stmt->fetchAll();
 }
-$activityStmt = db()->prepare('SELECT a.*, u.name AS user_name FROM project_activity a LEFT JOIN users u ON u.id = a.user_id WHERE a.project_id = ? ORDER BY a.created_at DESC LIMIT 25');
-$activityStmt->execute([$projectId]);
-$activities = $activityStmt->fetchAll();
 $companyLogo = setting_get('company_logo');
 $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageScript = 'assets/js/app.js'; require __DIR__ . '/inc/header.php';
 ?>
@@ -228,22 +218,6 @@ $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageSc
     <?php endif; ?>
   </div>
   <?php endif; ?>
-
-  <div class="card p-4 mt-4">
-    <h2 class="h4 mb-3"><i class="bi bi-clock-history me-2"></i>Änderungsverlauf</h2>
-    <?php if (!$activities): ?>
-      <p class="text-muted mb-0">Noch keine Änderungen protokolliert.</p>
-    <?php else: ?>
-      <div class="list-group list-group-flush">
-        <?php foreach ($activities as $entry): ?>
-          <div class="list-group-item px-0 d-flex flex-column flex-md-row justify-content-between gap-2">
-            <div><strong><?= e($entry['action']) ?></strong><?php if (!empty($entry['details'])): ?><div class="small text-muted"><?= e($entry['details']) ?></div><?php endif; ?></div>
-            <div class="small text-muted text-md-end"><?= e($entry['user_name'] ?: 'System') ?><br><?= e($entry['created_at']) ?></div>
-          </div>
-        <?php endforeach; ?>
-      </div>
-    <?php endif; ?>
-  </div>
 
   <section id="printArea" class="print-area"><div class="print-header"><div class="print-title-wrap"><?php if ($companyLogo): ?><img class="print-logo" src="<?= e(app_url($companyLogo)) ?>" alt="Firmenlogo"><?php endif; ?><div><h1>Stromplan Übersicht</h1><p><?= e($project['name']) ?> · <?= e($project['client']) ?></p></div></div><div class="print-meta"><?= date('d.m.Y') ?></div></div><div id="printSummary"></div><div id="printPhaseTables"></div><table class="print-table"><thead><tr><th>Gerät</th><th>Marke</th><th>Anzahl</th><th>Stromkreis</th><th>Phase</th><th>Leistung</th><th>Strom</th><th>Bemerkung</th></tr></thead><tbody id="printRows"></tbody></table></section>
 </main>

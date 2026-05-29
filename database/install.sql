@@ -130,14 +130,3 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
   applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 INSERT IGNORE INTO schema_migrations (version) VALUES ('1.4.0');
-
-CREATE TABLE IF NOT EXISTS project_activity (
-  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  project_id INT UNSIGNED NOT NULL,
-  user_id INT UNSIGNED NULL,
-  action VARCHAR(100) NOT NULL,
-  details TEXT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_project_activity_project (project_id),
-  INDEX idx_project_activity_user (user_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

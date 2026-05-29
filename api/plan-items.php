@@ -49,7 +49,6 @@ if ($method === 'POST') {
         max(1, (int)($data['voltage_v'] ?? ($device['voltage_v'] ?? 230))),
         trim((string)($data['remarks'] ?? ''))
     ]);
-    log_project_activity($projectId, (int)$user['id'], 'Position angelegt', $name);
     json_response(['ok' => true, 'id' => (int)$pdo->lastInsertId()]);
 }
 
@@ -79,20 +78,17 @@ if ($method === 'PATCH') {
     $values[] = $projectId;
     $stmt = $pdo->prepare('UPDATE plan_items SET ' . implode(', ', $fields) . ' WHERE id = ? AND project_id = ?');
     $stmt->execute($values);
-    log_project_activity($projectId, (int)$user['id'], 'Position geändert', 'ID ' . $id);
     json_response(['ok' => true]);
 }
 
 if ($method === 'DELETE') {
     if (isset($_GET['all'])) {
         $pdo->prepare('DELETE FROM plan_items WHERE project_id = ?')->execute([$projectId]);
-        log_project_activity($projectId, (int)$user['id'], 'Plan geleert');
         json_response(['ok' => true]);
     }
     $id = (int)($_GET['id'] ?? 0);
     if ($id <= 0) json_response(['error' => 'ID fehlt.'], 422);
     $pdo->prepare('DELETE FROM plan_items WHERE id = ? AND project_id = ?')->execute([$id, $projectId]);
-    log_project_activity($projectId, (int)$user['id'], 'Position gelöscht', 'ID ' . $id);
     json_response(['ok' => true]);
 }
 
