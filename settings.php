@@ -4,8 +4,9 @@ require_once __DIR__ . '/inc/helpers.php';
 $user = require_login();
 if (($user['role'] ?? '') !== 'admin') { header('Location: profile'); exit; }
 ensure_schema();
-$message = '';
-$error = '';
+$message = $_SESSION['flash_message'] ?? '';
+$error = $_SESSION['flash_error'] ?? '';
+unset($_SESSION['flash_message'], $_SESSION['flash_error']);
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     if ($action === 'upload_logo') {
@@ -43,6 +44,20 @@ require __DIR__ . '/inc/header.php';
   <?php if ($message): ?><div class="alert alert-success"><?= e($message) ?></div><?php endif; ?>
   <?php if ($error): ?><div class="alert alert-danger"><?= e($error) ?></div><?php endif; ?>
   <div class="row g-4">
+    <div class="col-12">
+      <div class="card p-4 border-primary border-2">
+        <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center">
+          <div>
+            <h2 class="h4 mb-1"><i class="bi bi-shield-check me-2"></i>Backup</h2>
+            <p class="small text-muted mb-0">Alle Projekte, Geräte, Nutzer, Einstellungen und Uploads als ZIP sichern oder wiederherstellen.</p>
+          </div>
+          <div class="d-flex flex-column flex-sm-row gap-2">
+            <a class="btn btn-success" href="<?= e(app_url('backup')) ?>"><i class="bi bi-download me-1"></i>Backup herunterladen</a>
+            <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#restoreBackupModal"><i class="bi bi-upload me-1"></i>Backup wiederherstellen</button>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="col-12">
       <div class="card p-4">
         <h2 class="h4">Firmenlogo</h2>
@@ -100,6 +115,26 @@ require __DIR__ . '/inc/header.php';
   </div>
 </main>
 
-<?php require __DIR__ . '/inc/footer.php'; ?>
+<div class="modal fade" id="restoreBackupModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="post" action="<?= e(app_url('backup')) ?>" enctype="multipart/form-data">
+        <div class="modal-header">
+          <h5 class="modal-title">Backup wiederherstellen</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-warning small mb-3">Die aktuellen Daten werden durch das Backup ersetzt.</div>
+          <label class="form-label">Backup-ZIP auswählen</label>
+          <input type="file" name="backup_file" class="form-control" accept=".zip,application/zip" required>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Abbrechen</button>
+          <button type="submit" class="btn btn-danger">Wiederherstellen</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
-<p><a href="backup.php?download_backup=1" class="btn btn-primary">Backup herunterladen</a></p>
+<?php require __DIR__ . '/inc/footer.php'; ?>
