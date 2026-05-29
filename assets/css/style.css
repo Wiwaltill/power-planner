@@ -87,3 +87,26 @@ body { background: var(--app-bg); }
   main.project-workspace .print-area { display: block !important; }
   .project-tabs, .breadcrumb, .project-hero, .tab-content, .alert { display: none !important; }
 }
+
+.tag-choice-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+.tag-choice {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+}
+.tag-choice .badge {
+  width: .85rem;
+  min-width: .85rem;
+  height: .85rem;
+  padding: 0;
+}
+.tag-color-editor {
+  min-width: 230px;
+}
+.tag-color-preview {
+  min-width: 82px;
+}

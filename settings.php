@@ -103,18 +103,21 @@ require __DIR__ . '/inc/header.php';
     <div class="col-lg-6">
       <div class="card p-4">
         <h2 class="h4">Projekt-Tags</h2>
-        <form class="input-group mb-3" data-form="tags">
-          <input class="form-control" placeholder="Neuer Tag" required>
-          <select class="form-select" style="max-width:150px" data-color>
-            <option value="secondary">Grau</option>
-            <option value="primary">Blau</option>
-            <option value="success">Grün</option>
-            <option value="warning">Gelb</option>
-            <option value="danger">Rot</option>
-            <option value="info">Hellblau</option>
-            <option value="dark">Dunkel</option>
-          </select>
-          <button class="btn btn-primary">Hinzufügen</button>
+        <form class="row g-2 align-items-center mb-3" data-form="tags">
+          <div class="col-12 col-md"><input class="form-control" placeholder="Neuer Tag" required></div>
+          <div class="col-8 col-md-auto">
+            <select class="form-select" data-color>
+              <option value="secondary">Grau</option>
+              <option value="primary">Blau</option>
+              <option value="success">Grün</option>
+              <option value="warning">Gelb</option>
+              <option value="danger">Rot</option>
+              <option value="info">Hellblau</option>
+              <option value="dark">Dunkel</option>
+            </select>
+          </div>
+          <div class="col-4 col-md-auto"><span class="badge text-bg-secondary tag-color-preview w-100">Grau</span></div>
+          <div class="col-12 col-md-auto"><button class="btn btn-primary w-100">Hinzufügen</button></div>
         </form>
         <div id="tagRows" class="list-group"></div>
       </div>

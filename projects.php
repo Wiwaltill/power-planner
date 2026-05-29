@@ -154,7 +154,21 @@ require __DIR__ . '/inc/header.php';
           <div class="col-12"><label class="form-label">Kunde</label><input class="form-control" name="client"></div>
           <div class="col-12"><label class="form-label">Techniker</label><input class="form-control" name="technician" value="<?= e($user['name']) ?>"></div>
           <div class="col-12"><label class="form-label">Status</label><select class="form-select" name="status"><?php foreach (project_status_options() as $key => $label): ?><option value="<?= e($key) ?>"><?= e($label) ?></option><?php endforeach; ?></select></div>
-          <div class="col-12"><label class="form-label">Tags</label><select class="form-select" name="tag_ids[]" multiple size="4"><?php foreach ($allTags as $tag): ?><option value="<?= (int)$tag['id'] ?>"><?= e($tag['name']) ?></option><?php endforeach; ?></select><div class="form-text">Mehrfachauswahl mit Strg/Cmd.</div></div>
+          <div class="col-12">
+            <label class="form-label">Tags</label>
+            <?php if ($allTags): ?>
+              <div class="tag-choice-group">
+                <?php foreach ($allTags as $tag): $tagColor = $tag['color'] ?: 'secondary'; ?>
+                  <input class="btn-check" type="checkbox" name="tag_ids[]" value="<?= (int)$tag['id'] ?>" id="newProjectTag<?= (int)$tag['id'] ?>" autocomplete="off">
+                  <label class="btn btn-sm btn-outline-<?= e($tagColor) ?> tag-choice" for="newProjectTag<?= (int)$tag['id'] ?>">
+                    <span class="badge rounded-pill text-bg-<?= e($tagColor) ?> me-1">&nbsp;</span><?= e($tag['name']) ?>
+                  </label>
+                <?php endforeach; ?>
+              </div>
+            <?php else: ?>
+              <div class="form-text">Noch keine Tags angelegt.</div>
+            <?php endif; ?>
+          </div>
           <div class="col-12"><button class="btn btn-primary w-100">Projekt erstellen</button></div>
         </form>
       </div>
