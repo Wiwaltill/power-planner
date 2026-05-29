@@ -11,7 +11,7 @@ unset($_SESSION['flash_message'], $_SESSION['flash_error']);
 
 function updater_http_get(string $url, array $headers = [], int $timeout = 20): string {
     $defaultHeaders = [
-        'User-Agent: PowerPlanner-Updater/1.3.5',
+        'User-Agent: PowerPlanner-Updater/' . APP_VERSION,
         'Accept: application/vnd.github+json, application/json, text/html;q=0.8',
         'X-GitHub-Api-Version: 2022-11-28'
     ];
@@ -60,7 +60,7 @@ function updater_http_get(string $url, array $headers = [], int $timeout = 20): 
 
 function updater_http_download(string $url, string $target, int $timeout = 120): void {
     $headers = [
-        'User-Agent: PowerPlanner-Updater/1.3.5',
+        'User-Agent: PowerPlanner-Updater/' . APP_VERSION,
         'Accept: application/octet-stream, application/zip, application/x-zip-compressed, */*'
     ];
 
@@ -75,7 +75,7 @@ function updater_http_download(string $url, string $target, int $timeout = 120):
             CURLOPT_CONNECTTIMEOUT => 15,
             CURLOPT_TIMEOUT => $timeout,
             CURLOPT_HTTPHEADER => $headers,
-            CURLOPT_USERAGENT => 'PowerPlanner-Updater/1.3.5',
+            CURLOPT_USERAGENT => 'PowerPlanner-Updater/' . APP_VERSION,
             CURLOPT_SSL_VERIFYPEER => true,
             CURLOPT_SSL_VERIFYHOST => 2,
         ]);
@@ -125,6 +125,16 @@ function updater_github_latest(): array {
         $msg = is_array($data) && !empty($data['message']) ? ': ' . $data['message'] : '';
         throw new RuntimeException('Ungültige GitHub-Antwort' . $msg . '.');
     }
+
+    // Wichtig: Die Updater-Seite schreibt denselben Cache, den der Footer nutzt.
+    // Dadurch zeigen Updater und Footer denselben Release-Stand an.
+    try {
+        setting_set('github_latest_release_cache', json_encode([
+            'checked_at' => time(),
+            'release' => $data
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+    } catch (Throwable $e) {}
+
     return $data;
 }
 function updater_version_clean(string $v): string { return ltrim(trim($v), 'vV'); }

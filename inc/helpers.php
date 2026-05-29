@@ -1,6 +1,6 @@
 <?php
 if (!defined('APP_GITHUB_URL')) { define('APP_GITHUB_URL', 'https://github.com/Wiwaltill/power-planner/'); }
-if (!defined('APP_VERSION')) { define('APP_VERSION', '1.3.6'); }
+if (!defined('APP_VERSION')) { define('APP_VERSION', '1.3.7'); }
 function e($value): string { return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8'); }
 function json_response($data, int $status = 200): void {
     http_response_code($status);
@@ -132,8 +132,21 @@ function latest_release_cached(bool $force = false): ?array {
         $cacheRaw = setting_get('github_latest_release_cache', '');
         if (!$force && $cacheRaw !== '') {
             $cache = json_decode($cacheRaw, true);
-            if (is_array($cache) && !empty($cache['checked_at']) && (time() - (int)$cache['checked_at']) < 86400) {
-                return is_array($cache['release'] ?? null) ? $cache['release'] : null;
+            if (is_array($cache) && !empty($cache['checked_at']) && is_array($cache['release'] ?? null)) {
+                $age = time() - (int)$cache['checked_at'];
+                $cachedRelease = $cache['release'];
+                $cachedTag = (string)($cachedRelease['tag_name'] ?? '');
+
+                // Wenn der Cache bereits ein Update zeigt, kann er länger genutzt werden.
+                if ($cachedTag !== '' && app_version_is_newer($cachedTag, APP_VERSION) && $age < 3600) {
+                    return $cachedRelease;
+                }
+
+                // Wenn der Cache "kein Update" sagt, nur sehr kurz cachen.
+                // So bleibt der Footer mit der Updater-Seite synchron und hängt nicht 24h auf "Aktuell" fest.
+                if ($cachedTag !== '' && !app_version_is_newer($cachedTag, APP_VERSION) && $age < 60) {
+                    return $cachedRelease;
+                }
             }
         }
         $repo = github_repo_from_url(APP_GITHUB_URL);
