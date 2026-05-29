@@ -101,3 +101,5 @@ require __DIR__ . '/inc/header.php';
 </main>
 
 <?php require __DIR__ . '/inc/footer.php'; ?>
+
+<p><a href="backup.php?download_backup=1" class="btn btn-primary">Backup herunterladen</a></p>
