@@ -69,6 +69,7 @@ $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageSc
   <?php if (!$isOwner): ?><div class="alert alert-info">Dieses Projekt wurde von <?= e($project['owner_name'] ?? '') ?> mit dir geteilt.</div><?php endif; ?>
   <?php if ($shareMessage): ?><div class="alert alert-success"><?= e($shareMessage) ?></div><?php endif; ?>
   <?php if ($shareError): ?><div class="alert alert-danger"><?= e($shareError) ?></div><?php endif; ?>
+  <?php if (isset($_GET['imported'])): ?><div class="alert alert-success">Projekt wurde erfolgreich importiert.</div><?php endif; ?>
   <div class="card p-3 p-md-4 mb-4">
     <div class="row g-3 align-items-end">
       <div class="col-md-4"><label class="form-label">Aktiver Stromkreis</label><select class="form-select" id="activeCircuitSelect"></select></div>
@@ -92,6 +93,7 @@ $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageSc
       <hr><div class="d-flex gap-2 flex-wrap">
         <button class="btn btn-outline-primary btn-sm flex-fill" id="exportPdf" type="button">PDF exportieren</button>
         <a class="btn btn-outline-success btn-sm flex-fill" id="exportExcel" href="<?= e(app_url('export-excel?id=' . (int)$project['id'])) ?>">Excel exportieren</a>
+        <a class="btn btn-outline-dark btn-sm flex-fill" href="<?= e(app_url('project-export?id=' . (int)$project['id'])) ?>"><i class="bi bi-download me-1"></i>Projekt exportieren</a>
         <?php if ($isOwner && !empty($project['public_share_enabled']) && !empty($project['public_share_token'])): ?>
           <button class="btn btn-outline-info btn-sm flex-fill copy-public-link" type="button" data-link="<?= e(app_full_url('public-project?token=' . urlencode($project['public_share_token']))) ?>"><i class="bi bi-clipboard me-1"></i>Web-Link kopieren</button>
         <?php endif; ?>

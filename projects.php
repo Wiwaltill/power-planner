@@ -51,6 +51,7 @@ require __DIR__ . '/inc/header.php';
 <main class="container py-4 flex-grow-1">
   <?php if (isset($_GET['deleted'])): ?><div class="alert alert-success">Projekt wurde gelöscht.</div><?php endif; ?>
   <?php if (isset($_GET['delete_error'])): ?><div class="alert alert-danger">Projekt konnte nicht gelöscht werden. Bitte prüfe die Bestätigung.</div><?php endif; ?>
+  <?php if (isset($_GET['import_error'])): ?><div class="alert alert-danger">Projekt konnte nicht importiert werden. Bitte prüfe die JSON-Datei.</div><?php endif; ?>
   <div class="row g-4">
     <div class="col-lg-4">
       <div class="card p-4 sticky-lg-top planner-form-card">
@@ -60,6 +61,14 @@ require __DIR__ . '/inc/header.php';
           <div class="col-12"><label class="form-label">Kunde</label><input class="form-control" name="client"></div>
           <div class="col-12"><label class="form-label">Techniker</label><input class="form-control" name="technician" value="<?= e($user['name']) ?>"></div>
           <div class="col-12"><button class="btn btn-primary w-100">Projekt erstellen</button></div>
+        </form>
+      </div>
+      <div class="card p-4 mt-4">
+        <h2 class="h5 mb-3"><i class="bi bi-upload me-2"></i>Projekt importieren</h2>
+        <p class="text-muted small mb-3">Ein einzelnes Projekt aus einer Power-Planner-JSON-Datei lokal wiederherstellen.</p>
+        <form method="post" action="<?= e(app_url('project-import')) ?>" enctype="multipart/form-data" class="row g-3">
+          <div class="col-12"><input class="form-control" type="file" name="project_file" accept="application/json,.json" required></div>
+          <div class="col-12"><button class="btn btn-outline-primary w-100" type="submit"><i class="bi bi-upload me-1"></i>Projekt importieren</button></div>
         </form>
       </div>
     </div>
