@@ -20,7 +20,7 @@ function ensure_schema(): void {
         version VARCHAR(50) NOT NULL PRIMARY KEY,
         applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-    $pdo->exec("INSERT IGNORE INTO schema_migrations (version) VALUES ('1.5.1')");
+    $pdo->exec("INSERT IGNORE INTO schema_migrations (version) VALUES ('1.5.2')");
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS project_shares (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
