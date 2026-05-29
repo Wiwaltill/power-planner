@@ -9,17 +9,62 @@ $message = $_SESSION['flash_message'] ?? '';
 $error = $_SESSION['flash_error'] ?? '';
 unset($_SESSION['flash_message'], $_SESSION['flash_error']);
 
-function updater_github_latest(): array {
-    $url = 'https://api.github.com/repos/Wiwaltill/power-planner/releases/latest';
+function updater_http_get(string $url, array $headers = [], int $timeout = 20): string {
+    $defaultHeaders = [
+        'User-Agent: PowerPlanner-Updater/1.3.4',
+        'Accept: application/vnd.github+json, application/json, text/html;q=0.8',
+        'X-GitHub-Api-Version: 2022-11-28'
+    ];
+    $headers = array_values(array_unique(array_merge($defaultHeaders, $headers)));
+
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT => $timeout,
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
+        ]);
+        $body = curl_exec($ch);
+        $err = curl_error($ch);
+        $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if ($body !== false && $status >= 200 && $status < 300) return $body;
+        throw new RuntimeException('GitHub konnte nicht abgefragt werden. HTTP-Status: ' . ($status ?: 'unbekannt') . ($err ? ' / ' . $err : ''));
+    }
+
+    if (!ini_get('allow_url_fopen')) {
+        throw new RuntimeException('GitHub konnte nicht abgefragt werden: cURL fehlt und allow_url_fopen ist deaktiviert. Bitte PHP-cURL aktivieren.');
+    }
+
     $ctx = stream_context_create(['http' => [
         'method' => 'GET',
-        'header' => "User-Agent: PowerPlanner-Updater\r\nAccept: application/vnd.github+json\r\n",
-        'timeout' => 15,
+        'header' => implode("\r\n", $headers) . "\r\n",
+        'timeout' => $timeout,
+        'ignore_errors' => true,
     ]]);
-    $json = @file_get_contents($url, false, $ctx);
-    if ($json === false) throw new RuntimeException('GitHub Release konnte nicht abgefragt werden.');
+    $body = @file_get_contents($url, false, $ctx);
+    $status = 0;
+    if (isset($http_response_header) && is_array($http_response_header)) {
+        foreach ($http_response_header as $h) {
+            if (preg_match('/^HTTP\/\S+\s+(\d+)/', $h, $m)) { $status = (int)$m[1]; break; }
+        }
+    }
+    if ($body !== false && $status >= 200 && $status < 300) return $body;
+    throw new RuntimeException('GitHub konnte nicht abgefragt werden. HTTP-Status: ' . ($status ?: 'unbekannt'));
+}
+
+function updater_github_latest(): array {
+    $url = 'https://api.github.com/repos/Wiwaltill/power-planner/releases/latest';
+    $json = updater_http_get($url, [], 20);
     $data = json_decode($json, true);
-    if (!is_array($data) || empty($data['tag_name'])) throw new RuntimeException('Ungültige GitHub-Antwort.');
+    if (!is_array($data) || empty($data['tag_name'])) {
+        $msg = is_array($data) && !empty($data['message']) ? ': ' . $data['message'] : '';
+        throw new RuntimeException('Ungültige GitHub-Antwort' . $msg . '.');
+    }
     return $data;
 }
 function updater_version_clean(string $v): string { return ltrim(trim($v), 'vV'); }
