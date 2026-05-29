@@ -67,6 +67,19 @@ if ($method === 'GET') {
     $stmt = $pdo->prepare("SELECT id, user_id, name, brand, category, power_w, voltage_v, connector, notes, deleted_at FROM devices WHERE {$where} ORDER BY brand, name");
     $stmt->execute();
     $devices = $stmt->fetchAll();
+
+    if (isset($_GET['csv_export'])) {
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="geraete-export.csv"');
+        $out = fopen('php://output', 'w');
+        fputcsv($out, ['Name','Marke','Kategorie','Leistung W','Spannung V','Anschluss','Notizen'], ';');
+        foreach ($devices as $d) {
+            fputcsv($out, [$d['name'], $d['brand'], $d['category'], $d['power_w'], $d['voltage_v'], $d['connector'], $d['notes']], ';');
+        }
+        fclose($out);
+        exit;
+    }
+
     if (isset($_GET['export'])) {
         header('Content-Type: application/json; charset=utf-8');
         header('Content-Disposition: attachment; filename="devices-export.json"');

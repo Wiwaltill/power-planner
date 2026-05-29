@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS projects (
   name VARCHAR(190) NOT NULL,
   client VARCHAR(190) DEFAULT '',
   technician VARCHAR(190) DEFAULT '',
+  status ENUM('planning','approved','setup','live','completed') NOT NULL DEFAULT 'planning',
   public_share_token VARCHAR(96) NULL,
   public_share_enabled TINYINT(1) NOT NULL DEFAULT 0,
   public_share_expires_at DATETIME NULL,
@@ -122,6 +123,23 @@ CREATE TABLE IF NOT EXISTS device_connectors (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
+
+CREATE TABLE IF NOT EXISTS project_tags (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(190) NOT NULL,
+  color VARCHAR(40) NOT NULL DEFAULT 'secondary',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_project_tag_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS project_tag_map (
+  project_id INT UNSIGNED NOT NULL,
+  tag_id INT UNSIGNED NOT NULL,
+  PRIMARY KEY (project_id, tag_id),
+  CONSTRAINT fk_project_tag_map_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+  CONSTRAINT fk_project_tag_map_tag FOREIGN KEY (tag_id) REFERENCES project_tags(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS app_settings (
   setting_key VARCHAR(100) NOT NULL PRIMARY KEY,
   setting_value TEXT NULL,
@@ -133,4 +151,4 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
   version VARCHAR(50) NOT NULL PRIMARY KEY,
   applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-INSERT IGNORE INTO schema_migrations (version) VALUES ('1.5.0');
+INSERT IGNORE INTO schema_migrations (version) VALUES ('1.6.0');

@@ -38,7 +38,7 @@ require __DIR__ . '/inc/header.php';
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
       <h1 class="h3 mb-1">Einstellungen</h1>
-      <div class="small-muted">Marken, Kategorien, Anschlüsse und Firmenlogo verwalten.</div>
+      <div class="small-muted">Marken, Kategorien, Anschlüsse, Projekt-Tags und Firmenlogo verwalten.</div>
     </div>
   </div>
   <?php if ($message): ?><div class="alert alert-success"><?= e($message) ?></div><?php endif; ?>
@@ -96,6 +96,27 @@ require __DIR__ . '/inc/header.php';
           <button class="btn btn-primary">Hinzufügen</button>
         </form>
         <div id="connectorRows" class="list-group"></div>
+      </div>
+    </div>
+
+
+    <div class="col-lg-6">
+      <div class="card p-4">
+        <h2 class="h4">Projekt-Tags</h2>
+        <form class="input-group mb-3" data-form="tags">
+          <input class="form-control" placeholder="Neuer Tag" required>
+          <select class="form-select" style="max-width:150px" data-color>
+            <option value="secondary">Grau</option>
+            <option value="primary">Blau</option>
+            <option value="success">Grün</option>
+            <option value="warning">Gelb</option>
+            <option value="danger">Rot</option>
+            <option value="info">Info</option>
+            <option value="dark">Dunkel</option>
+          </select>
+          <button class="btn btn-primary">Hinzufügen</button>
+        </form>
+        <div id="tagRows" class="list-group"></div>
       </div>
     </div>
 

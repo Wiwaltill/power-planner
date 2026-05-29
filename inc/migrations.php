@@ -20,7 +20,7 @@ function ensure_schema(): void {
         version VARCHAR(50) NOT NULL PRIMARY KEY,
         applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-    $pdo->exec("INSERT IGNORE INTO schema_migrations (version) VALUES ('1.5.2')");
+    $pdo->exec("INSERT IGNORE INTO schema_migrations (version) VALUES ('1.6.0')");
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS project_shares (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -104,6 +104,27 @@ function ensure_schema(): void {
     if (table_exists($pdo, 'project_shares') && !column_exists($pdo, 'project_shares', 'permission')) {
         $pdo->exec("ALTER TABLE project_shares ADD permission ENUM('view','edit','manage') NOT NULL DEFAULT 'view'");
     }
+
+    if (table_exists($pdo, 'projects')) {
+        if (!column_exists($pdo, 'projects', 'status')) {
+            $pdo->exec("ALTER TABLE projects ADD status ENUM('planning','approved','setup','live','completed') NOT NULL DEFAULT 'planning'");
+        }
+    }
+    $pdo->exec("CREATE TABLE IF NOT EXISTS project_tags (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(190) NOT NULL,
+        color VARCHAR(40) NOT NULL DEFAULT 'secondary',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uniq_project_tag_name (name)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS project_tag_map (
+        project_id INT UNSIGNED NOT NULL,
+        tag_id INT UNSIGNED NOT NULL,
+        PRIMARY KEY (project_id, tag_id),
+        CONSTRAINT fk_project_tag_map_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+        CONSTRAINT fk_project_tag_map_tag FOREIGN KEY (tag_id) REFERENCES project_tags(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
     if (table_exists($pdo, 'project_activity')) {
         $pdo->exec("DROP TABLE project_activity");
     }

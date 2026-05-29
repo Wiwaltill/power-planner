@@ -13,10 +13,26 @@ $shareMessage = '';
 $shareError = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
-    $manageActions = ['share_project','unshare_project','update_share_permission','enable_public_share','disable_public_share','regenerate_public_share','update_public_share','clear_public_share_expiry'];
+    $manageActions = ['share_project','unshare_project','update_share_permission','enable_public_share','disable_public_share','regenerate_public_share','update_public_share','clear_public_share_expiry','update_project_meta'];
     $ownerActions = ['transfer_owner'];
     if (in_array($action, $manageActions, true) && !$canManage) { $shareError = 'Keine Verwaltungsrechte für dieses Projekt.'; $action = ''; }
     if (in_array($action, $ownerActions, true) && !$canOwner) { $shareError = 'Nur der Besitzer darf diese Aktion ausführen.'; $action = ''; }
+
+    if ($action === 'update_project_meta') {
+        $name = trim((string)($_POST['name'] ?? $project['name']));
+        $client = trim((string)($_POST['client'] ?? ''));
+        $technician = trim((string)($_POST['technician'] ?? ''));
+        $status = in_array(($_POST['status'] ?? 'planning'), array_keys(project_status_options()), true) ? $_POST['status'] : 'planning';
+        if ($name === '') {
+            $shareError = 'Projektname darf nicht leer sein.';
+        } else {
+            db()->prepare('UPDATE projects SET name = ?, client = ?, technician = ?, status = ? WHERE id = ?')->execute([$name, $client, $technician, $status, $projectId]);
+            set_project_tags($projectId, array_map('intval', $_POST['tag_ids'] ?? []));
+            $project = user_project($projectId, (int)$user['id']);
+            $shareMessage = 'Projektdaten wurden gespeichert.';
+        }
+    }
+
     if ($action === 'share_project') {
         $shareUserId = (int)($_POST['share_user_id'] ?? 0);
         if ($shareUserId > 0 && $shareUserId !== (int)$user['id']) {
@@ -118,13 +134,16 @@ if ($canManage) {
     $stmt->execute([(int)$user['id'], (int)$project['user_id'], $projectId]);
     $availableShareUsers = $stmt->fetchAll();
 }
+$allTags = all_project_tags();
+$currentProjectTags = project_tags($projectId);
+$currentProjectTagIds = array_map(fn($t) => (int)$t['id'], $currentProjectTags);
 $companyLogo = setting_get('company_logo');
 $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageScript = 'assets/js/app.js'; require __DIR__ . '/inc/header.php';
 ?>
 <script>window.APP_PROJECT_ID = <?= (int)$project['id'] ?>; window.APP_CAN_EDIT = <?= $canEdit ? 'true' : 'false' ?>; window.APP_PROJECT_ARCHIVED = <?= $isArchived ? 'true' : 'false' ?>;</script>
 <main class="container py-4 flex-grow-1">
   <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-4">
-    <div><h1 class="h3 mb-1"><?= e($project['name']) ?></h1><div class="small-muted"><?= e($project['client'] ?: 'Kein Kunde') ?> · <?= e($project['technician'] ?: 'Kein Techniker') ?></div></div>
+    <div><h1 class="h3 mb-1"><?= e($project['name']) ?></h1><div class="small-muted"><?= e($project['client'] ?: 'Kein Kunde') ?> · <?= e($project['technician'] ?: 'Kein Techniker') ?></div><div class="mt-2"><span class="badge text-bg-<?= e(project_status_badge($project['status'] ?? 'planning')) ?>"><?= e(project_status_label($project['status'] ?? 'planning')) ?></span><?php foreach ($currentProjectTags as $tag): ?> <span class="badge text-bg-<?= e($tag['color'] ?: 'secondary') ?>"><?= e($tag['name']) ?></span><?php endforeach; ?></div></div>
     <a href="<?= e(app_url('projects')) ?>" class="btn btn-outline-secondary">Zur Projektliste</a>
   </div>
   <?php if (!$isOwner): ?><div class="alert alert-info">Dieses Projekt wurde von <?= e($project['owner_name'] ?? '') ?> mit dir geteilt. Berechtigung: <?= e(project_permission_label($project['permission'] ?? 'view')) ?>.</div><?php endif; ?>
@@ -133,6 +152,21 @@ $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageSc
   <?php if ($shareError): ?><div class="alert alert-danger"><?= e($shareError) ?></div><?php endif; ?>
   <?php if (isset($_GET['imported'])): ?><div class="alert alert-success">Projekt wurde erfolgreich importiert.</div><?php endif; ?>
   <?php if (isset($_GET['duplicated'])): ?><div class="alert alert-success">Projekt wurde dupliziert.</div><?php endif; ?>
+
+  <?php if ($canManage): ?>
+  <div class="card p-4 mb-4">
+    <h2 class="h4 mb-3"><i class="bi bi-sliders me-2"></i>Projektdaten</h2>
+    <form method="post" class="row g-3">
+      <input type="hidden" name="action" value="update_project_meta">
+      <div class="col-md-6"><label class="form-label">Projektname</label><input class="form-control" name="name" value="<?= e($project['name']) ?>" required <?= $isArchived ? 'disabled' : '' ?>></div>
+      <div class="col-md-3"><label class="form-label">Kunde</label><input class="form-control" name="client" value="<?= e($project['client'] ?? '') ?>" <?= $isArchived ? 'disabled' : '' ?>></div>
+      <div class="col-md-3"><label class="form-label">Techniker</label><input class="form-control" name="technician" value="<?= e($project['technician'] ?? '') ?>" <?= $isArchived ? 'disabled' : '' ?>></div>
+      <div class="col-md-4"><label class="form-label">Status</label><select class="form-select" name="status" <?= $isArchived ? 'disabled' : '' ?>><?php foreach (project_status_options() as $key => $label): ?><option value="<?= e($key) ?>" <?= ($project['status'] ?? 'planning') === $key ? 'selected' : '' ?>><?= e($label) ?></option><?php endforeach; ?></select></div>
+      <div class="col-md-6"><label class="form-label">Tags</label><select class="form-select" name="tag_ids[]" multiple size="3" <?= $isArchived ? 'disabled' : '' ?>><?php foreach ($allTags as $tag): ?><option value="<?= (int)$tag['id'] ?>" <?= in_array((int)$tag['id'], $currentProjectTagIds, true) ? 'selected' : '' ?>><?= e($tag['name']) ?></option><?php endforeach; ?></select></div>
+      <div class="col-md-2 d-flex align-items-end"><button class="btn btn-primary w-100" <?= $isArchived ? 'disabled' : '' ?>>Speichern</button></div>
+    </form>
+  </div>
+  <?php endif; ?>
   <div class="card p-3 p-md-4 mb-4">
     <div class="row g-3 align-items-end">
       <div class="col-md-4"><label class="form-label">Aktiver Stromkreis</label><select class="form-select" id="activeCircuitSelect"></select></div>
@@ -259,7 +293,12 @@ $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageSc
   </div>
   <?php endif; ?>
 
-  <section id="printArea" class="print-area"><div class="print-header"><div class="print-title-wrap"><?php if ($companyLogo): ?><img class="print-logo" src="<?= e(app_url($companyLogo)) ?>" alt="Firmenlogo"><?php endif; ?><div><h1>Stromplan Übersicht</h1><p><?= e($project['name']) ?> · <?= e($project['client']) ?></p></div></div><div class="print-meta"><?= date('d.m.Y') ?></div></div><div id="printSummary"></div><div id="printPhaseTables"></div><table class="print-table"><thead><tr><th>Gerät</th><th>Marke</th><th>Anzahl</th><th>Stromkreis</th><th>Phase</th><th>Leistung</th><th>Strom</th><th>Bemerkung</th></tr></thead><tbody id="printRows"></tbody></table></section>
+  <section id="printArea" class="print-area"><div class="print-header"><div class="print-title-wrap"><?php if ($companyLogo): ?><img class="print-logo" src="<?= e(app_url($companyLogo)) ?>" alt="Firmenlogo"><?php endif; ?><div><h1>Stromplan Übersicht</h1><p><?= e($project['name']) ?> · <?= e($project['client']) ?></p></div></div><div class="print-meta"><?= date('d.m.Y') ?></div>
+
+      <?php if (!empty($project['public_share_enabled']) && !empty($project['public_share_token'])): ?>
+        <div class="print-qr"><img src="<?= e(qr_png_url(app_full_url('public-project?token=' . urlencode($project['public_share_token'])), 120)) ?>" alt="QR-Code"><div>Web-Share</div></div>
+      <?php endif; ?>
+</div><div id="printSummary"></div><div id="printPhaseTables"></div><table class="print-table"><thead><tr><th>Gerät</th><th>Marke</th><th>Anzahl</th><th>Stromkreis</th><th>Phase</th><th>Leistung</th><th>Strom</th><th>Bemerkung</th></tr></thead><tbody id="printRows"></tbody></table></section>
 </main>
 <script>
 document.addEventListener('click', async function (event) {

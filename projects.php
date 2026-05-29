@@ -87,9 +87,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $name = trim($_POST['name'] ?? '');
     if ($name) {
-        $stmt = db()->prepare('INSERT INTO projects (user_id, name, client, technician) VALUES (?, ?, ?, ?)');
-        $stmt->execute([(int)$user['id'], $name, trim($_POST['client'] ?? ''), trim($_POST['technician'] ?? '')]);
+        $status = in_array(($_POST['status'] ?? 'planning'), array_keys(project_status_options()), true) ? $_POST['status'] : 'planning';
+        $stmt = db()->prepare('INSERT INTO projects (user_id, name, client, technician, status) VALUES (?, ?, ?, ?, ?)');
+        $stmt->execute([(int)$user['id'], $name, trim($_POST['client'] ?? ''), trim($_POST['technician'] ?? ''), $status]);
         $projectId = (int)db()->lastInsertId();
+        set_project_tags($projectId, array_map('intval', $_POST['tag_ids'] ?? []));
         db()->prepare('INSERT INTO circuits (project_id, name, amp_limit) VALUES (?, ?, 16.00)')->execute([$projectId, 'Standard-Stromkreis']);
         header('Location: project?id=' . $projectId); exit;
     }
@@ -104,11 +106,37 @@ $trashProjects = $trashStmt->fetchAll();
 $archiveStmt = db()->prepare('SELECT p.*, u.name AS owner_name, u.email AS owner_email, CASE WHEN p.user_id = ? THEN 1 ELSE 0 END AS is_owner, COALESCE(ps.permission, CASE WHEN p.user_id = ? THEN \'manage\' ELSE ps.permission END) AS permission, COUNT(DISTINCT c.id) circuits, COUNT(DISTINCT i.id) items FROM projects p JOIN users u ON u.id = p.user_id LEFT JOIN project_shares ps ON ps.project_id = p.id AND ps.user_id = ? LEFT JOIN circuits c ON c.project_id = p.id LEFT JOIN plan_items i ON i.project_id = p.id WHERE p.deleted_at IS NULL AND p.archived_at IS NOT NULL AND (p.user_id = ? OR ps.user_id = ?) GROUP BY p.id ORDER BY p.archived_at DESC');
 $archiveStmt->execute([(int)$user['id'], (int)$user['id'], (int)$user['id'], (int)$user['id'], (int)$user['id']]);
 $archivedProjects = $archiveStmt->fetchAll();
+
+$allTags = all_project_tags();
+$allProjectIds = array_map(fn($p) => (int)$p['id'], array_merge($projects, $archivedProjects, $trashProjects));
+$projectTags = project_tags_grouped($allProjectIds);
+$dashboardStats = [
+    'active' => count($projects),
+    'archived' => count($archivedProjects),
+    'public' => 0,
+    'devices' => 0,
+    'users' => 0,
+];
+try {
+    $stmt = db()->prepare('SELECT COUNT(*) FROM projects p LEFT JOIN project_shares ps ON ps.project_id = p.id AND ps.user_id = ? WHERE p.deleted_at IS NULL AND p.archived_at IS NULL AND p.public_share_enabled = 1 AND (p.user_id = ? OR ps.user_id = ?)');
+    $stmt->execute([(int)$user['id'], (int)$user['id'], (int)$user['id']]);
+    $dashboardStats['public'] = (int)$stmt->fetchColumn();
+    $dashboardStats['devices'] = (int)db()->query('SELECT COUNT(*) FROM devices WHERE deleted_at IS NULL')->fetchColumn();
+    $dashboardStats['users'] = (($user['role'] ?? '') === 'admin') ? (int)db()->query('SELECT COUNT(*) FROM users WHERE active = 1')->fetchColumn() : null;
+} catch (Throwable $e) {}
+
 $pageTitle = 'Projekte';
 $activePage = 'projects';
 require __DIR__ . '/inc/header.php';
 ?>
 <main class="container py-4 flex-grow-1">
+
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3"><div class="card p-3"><div class="small text-muted">Aktive Projekte</div><div class="h3 mb-0"><?= (int)$dashboardStats['active'] ?></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card p-3"><div class="small text-muted">Archivierte Projekte</div><div class="h3 mb-0"><?= (int)$dashboardStats['archived'] ?></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card p-3"><div class="small text-muted">Öffentliche Freigaben</div><div class="h3 mb-0"><?= (int)$dashboardStats['public'] ?></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card p-3"><div class="small text-muted">Geräte</div><div class="h3 mb-0"><?= (int)$dashboardStats['devices'] ?></div></div></div>
+  </div>
   <?php if (isset($_GET['deleted'])): ?><div class="alert alert-success">Projekt wurde in den Papierkorb verschoben.</div><?php endif; ?>
   <?php if (isset($_GET['restored'])): ?><div class="alert alert-success">Projekt wurde wiederhergestellt.</div><?php endif; ?>
   <?php if (isset($_GET['purged'])): ?><div class="alert alert-success">Projekt wurde endgültig gelöscht.</div><?php endif; ?>
@@ -125,6 +153,8 @@ require __DIR__ . '/inc/header.php';
           <div class="col-12"><label class="form-label">Projektname</label><input class="form-control" name="name" required></div>
           <div class="col-12"><label class="form-label">Kunde</label><input class="form-control" name="client"></div>
           <div class="col-12"><label class="form-label">Techniker</label><input class="form-control" name="technician" value="<?= e($user['name']) ?>"></div>
+          <div class="col-12"><label class="form-label">Status</label><select class="form-select" name="status"><?php foreach (project_status_options() as $key => $label): ?><option value="<?= e($key) ?>"><?= e($label) ?></option><?php endforeach; ?></select></div>
+          <div class="col-12"><label class="form-label">Tags</label><select class="form-select" name="tag_ids[]" multiple size="4"><?php foreach ($allTags as $tag): ?><option value="<?= (int)$tag['id'] ?>"><?= e($tag['name']) ?></option><?php endforeach; ?></select><div class="form-text">Mehrfachauswahl mit Strg/Cmd.</div></div>
           <div class="col-12"><button class="btn btn-primary w-100">Projekt erstellen</button></div>
         </form>
       </div>
@@ -140,15 +170,19 @@ require __DIR__ . '/inc/header.php';
     <div class="col-lg-8">
       <div class="card p-4">
         <h2 class="h4 mb-3">Meine Projekte</h2>
+        <input class="form-control mb-3" id="projectSearch" placeholder="Projekte suchen nach Name, Kunde, Techniker, Besitzer oder Tags...">
         <?php if (!$projects): ?>
           <p class="text-muted mb-0">Noch keine Projekte vorhanden.</p>
         <?php else: ?>
           <div class="list-group list-group-flush">
             <?php foreach ($projects as $p): ?>
-              <div class="list-group-item d-flex flex-wrap gap-3 justify-content-between align-items-center">
+              <?php $tags = $projectTags[(int)$p['id']] ?? []; $searchText = strtolower(($p['name'] ?? '') . ' ' . ($p['client'] ?? '') . ' ' . ($p['technician'] ?? '') . ' ' . ($p['owner_name'] ?? '') . ' ' . implode(' ', array_map(fn($t) => $t['name'], $tags))); ?>
+              <div class="list-group-item d-flex flex-wrap gap-3 justify-content-between align-items-center project-list-row" data-search="<?= e($searchText) ?>">
                 <a class="text-decoration-none text-reset flex-grow-1" href="<?= e(app_url('project?id=' . (int)$p['id'])) ?>">
                   <div class="d-flex flex-wrap gap-2 align-items-center">
                     <strong><?= e($p['name']) ?></strong>
+                    <span class="badge text-bg-<?= e(project_status_badge($p['status'] ?? 'planning')) ?>"><?= e(project_status_label($p['status'] ?? 'planning')) ?></span>
+                    <?php foreach (($projectTags[(int)$p['id']] ?? []) as $tag): ?><span class="badge text-bg-<?= e($tag['color'] ?: 'secondary') ?>"><?= e($tag['name']) ?></span><?php endforeach; ?>
                     <?php if ((int)$p['is_owner'] !== 1): ?><span class="badge text-bg-info">geteilt</span><span class="badge text-bg-secondary"><?= e(project_permission_label($p['permission'] ?? 'view')) ?></span><?php endif; ?>
                   </div>
                   <span class="small-muted d-block"><?= e($p['client'] ?: 'Kein Kunde') ?> · <?= (int)$p['circuits'] ?> Stromkreis(e) · <?= (int)$p['items'] ?> Position(en)</span>
@@ -236,4 +270,14 @@ require __DIR__ . '/inc/header.php';
     </div>
   </div>
 </main>
+
+<script>
+document.getElementById('projectSearch')?.addEventListener('input', function(){
+  const q = this.value.toLowerCase().trim();
+  document.querySelectorAll('.project-list-row').forEach(row => {
+    row.style.display = !q || row.dataset.search.includes(q) ? '' : 'none';
+  });
+});
+</script>
+
 <?php require __DIR__ . '/inc/footer.php'; ?>

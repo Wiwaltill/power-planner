@@ -13,13 +13,20 @@ async function loadSettings() {
   renderSettings('brands', data.brands || [], document.getElementById('brandRows'));
   renderSettings('categories', data.categories || [], document.getElementById('categoryRows'));
   renderSettings('connectors', data.connectors || [], document.getElementById('connectorRows'));
+  renderSettings('tags', data.tags || [], document.getElementById('tagRows'));
 }
 function renderSettings(type, rows, el) {
-  el.innerHTML = rows.length ? rows.map(row => `<div class="list-group-item d-flex gap-2 align-items-center"><input class="form-control form-control-sm" value="${escSettings(row.name)}" data-id="${row.id}" data-type="${type}"><button class="btn btn-sm btn-outline-secondary" onclick="saveSetting('${type}', ${row.id}, this)">Speichern</button><button class="btn btn-sm btn-outline-danger" onclick="deleteSetting('${type}', ${row.id})">Löschen</button></div>`).join('') : '<div class="text-muted small">Noch keine Einträge.</div>';
+  if (!el) return;
+  el.innerHTML = rows.length ? rows.map(row => {
+    const colorSelect = type === 'tags' ? `<select class="form-select form-select-sm" data-color-edit style="max-width:120px">
+      ${['secondary','primary','success','warning','danger','info','dark'].map(c=>`<option value="${c}" ${row.color===c?'selected':''}>${c}</option>`).join('')}
+    </select>` : '';
+    return `<div class="list-group-item d-flex gap-2 align-items-center"><input class="form-control form-control-sm" value="${escSettings(row.name)}" data-id="${row.id}" data-type="${type}">${colorSelect}<button class="btn btn-sm btn-outline-secondary" onclick="saveSetting('${type}', ${row.id}, this)">Speichern</button><button class="btn btn-sm btn-outline-danger" onclick="deleteSetting('${type}', ${row.id})">Löschen</button></div>`;
+  }).join('') : '<div class="text-muted small">Noch keine Einträge.</div>';
 }
 async function saveSetting(type, id, btn) {
   const input = btn.parentElement.querySelector('input');
-  await settingsJson(`${apiSettings}?type=${type}&id=${id}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:input.value})});
+  await settingsJson(`${apiSettings}?type=${type}&id=${id}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:input.value, color: btn.parentElement.querySelector('[data-color-edit]')?.value || 'secondary'})});
   await loadSettings();
 }
 async function deleteSetting(type, id) {
@@ -32,7 +39,7 @@ document.querySelectorAll('[data-form]').forEach(form => form.addEventListener('
   const type = form.dataset.form;
   const input = form.querySelector('input');
   try {
-    await settingsJson(`${apiSettings}?type=${type}`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:input.value})});
+    await settingsJson(`${apiSettings}?type=${type}`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:input.value, color: form.querySelector('[data-color]')?.value || 'secondary'})});
     input.value = '';
     await loadSettings();
   } catch(err) { AppUI.error(err.message); }

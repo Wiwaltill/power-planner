@@ -1,6 +1,6 @@
 <?php
 if (!defined('APP_GITHUB_URL')) { define('APP_GITHUB_URL', 'https://github.com/Wiwaltill/power-planner/'); }
-if (!defined('APP_VERSION')) { define('APP_VERSION', '1.5.2'); }
+if (!defined('APP_VERSION')) { define('APP_VERSION', '1.6.0'); }
 function e($value): string { return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8'); }
 function json_response($data, int $status = 200): void {
     http_response_code($status);
@@ -239,4 +239,64 @@ function available_update_info(): ?array {
     if (!$release || empty($release['tag_name'])) return null;
     if (!app_version_is_newer((string)$release['tag_name'], APP_VERSION)) return null;
     return $release;
+}
+
+
+function project_status_options(): array {
+    return [
+        'planning' => 'Planung',
+        'approved' => 'Freigegeben',
+        'setup' => 'Im Aufbau',
+        'live' => 'In Betrieb',
+        'completed' => 'Abgeschlossen',
+    ];
+}
+function project_status_label(?string $status): string {
+    $options = project_status_options();
+    return $options[$status ?: 'planning'] ?? 'Planung';
+}
+function project_status_badge(?string $status): string {
+    return [
+        'planning' => 'secondary',
+        'approved' => 'success',
+        'setup' => 'warning',
+        'live' => 'primary',
+        'completed' => 'dark',
+    ][$status ?: 'planning'] ?? 'secondary';
+}
+function project_tags(int $projectId): array {
+    ensure_schema();
+    $stmt = db()->prepare('SELECT t.id, t.name, t.color FROM project_tags t JOIN project_tag_map m ON m.tag_id = t.id WHERE m.project_id = ? ORDER BY t.name');
+    $stmt->execute([$projectId]);
+    return $stmt->fetchAll();
+}
+function project_tags_grouped(array $projectIds): array {
+    if (!$projectIds) return [];
+    ensure_schema();
+    $placeholders = implode(',', array_fill(0, count($projectIds), '?'));
+    $stmt = db()->prepare("SELECT m.project_id, t.id, t.name, t.color FROM project_tag_map m JOIN project_tags t ON t.id = m.tag_id WHERE m.project_id IN ($placeholders) ORDER BY t.name");
+    $stmt->execute(array_values($projectIds));
+    $out = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $out[(int)$row['project_id']][] = $row;
+    }
+    return $out;
+}
+function set_project_tags(int $projectId, array $tagIds): void {
+    ensure_schema();
+    $pdo = db();
+    $pdo->prepare('DELETE FROM project_tag_map WHERE project_id = ?')->execute([$projectId]);
+    $stmt = $pdo->prepare('INSERT IGNORE INTO project_tag_map (project_id, tag_id) VALUES (?, ?)');
+    foreach ($tagIds as $tagId) {
+        $tagId = (int)$tagId;
+        if ($tagId > 0) $stmt->execute([$projectId, $tagId]);
+    }
+}
+function all_project_tags(): array {
+    ensure_schema();
+    $stmt = db()->query('SELECT id, name, color FROM project_tags ORDER BY name');
+    return $stmt->fetchAll();
+}
+function qr_png_url(string $data, int $size = 140): string {
+    return 'https://api.qrserver.com/v1/create-qr-code/?size=' . $size . 'x' . $size . '&data=' . rawurlencode($data);
 }

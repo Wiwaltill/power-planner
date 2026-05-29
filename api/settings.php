@@ -6,10 +6,11 @@ ensure_schema();
 $pdo = db();
 $method = $_SERVER['REQUEST_METHOD'];
 $type = $_GET['type'] ?? 'all';
-$tables = ['brands' => 'device_brands', 'categories' => 'device_categories', 'connectors' => 'device_connectors'];
+$tables = ['brands' => 'device_brands', 'categories' => 'device_categories', 'connectors' => 'device_connectors', 'tags' => 'project_tags'];
 
 function list_values(PDO $pdo, string $table): array {
-    $stmt = $pdo->prepare("SELECT id, name FROM {$table} ORDER BY name");
+    $select = $table === 'project_tags' ? 'id, name, color' : 'id, name';
+    $stmt = $pdo->prepare("SELECT {$select} FROM {$table} ORDER BY name");
     $stmt->execute();
     return $stmt->fetchAll();
 }
@@ -19,6 +20,7 @@ if ($method === 'GET') {
         'brands' => list_values($pdo, 'device_brands'),
         'categories' => list_values($pdo, 'device_categories'),
         'connectors' => list_values($pdo, 'device_connectors'),
+        'tags' => list_values($pdo, 'project_tags'),
     ]);
 }
 
@@ -30,8 +32,14 @@ if ($method === 'POST') {
     $name = trim((string)($data['name'] ?? ''));
     if ($name === '') json_response(['error' => 'Name fehlt.'], 422);
     try {
-        $stmt = $pdo->prepare("INSERT INTO {$table} (user_id, name) VALUES (?, ?)");
-        $stmt->execute([(int)$user['id'], $name]);
+        if ($table === 'project_tags') {
+            $color = preg_replace('/[^a-zA-Z0-9_-]/', '', (string)($data['color'] ?? 'secondary')) ?: 'secondary';
+            $stmt = $pdo->prepare("INSERT INTO {$table} (name, color) VALUES (?, ?)");
+            $stmt->execute([$name, $color]);
+        } else {
+            $stmt = $pdo->prepare("INSERT INTO {$table} (user_id, name) VALUES (?, ?)");
+            $stmt->execute([(int)$user['id'], $name]);
+        }
         json_response(['ok' => true, 'id' => (int)$pdo->lastInsertId(), 'name' => $name]);
     } catch (PDOException $e) {
         json_response(['error' => 'Eintrag existiert bereits.'], 422);
@@ -43,8 +51,14 @@ if ($method === 'PATCH') {
     $name = trim((string)($data['name'] ?? ''));
     if ($id <= 0 || $name === '') json_response(['error' => 'ID oder Name fehlt.'], 422);
     try {
-        $stmt = $pdo->prepare("UPDATE {$table} SET name = ? WHERE id = ?");
-        $stmt->execute([$name, $id]);
+        if ($table === 'project_tags') {
+            $color = preg_replace('/[^a-zA-Z0-9_-]/', '', (string)($data['color'] ?? 'secondary')) ?: 'secondary';
+            $stmt = $pdo->prepare("UPDATE {$table} SET name = ?, color = ? WHERE id = ?");
+            $stmt->execute([$name, $color, $id]);
+        } else {
+            $stmt = $pdo->prepare("UPDATE {$table} SET name = ? WHERE id = ?");
+            $stmt->execute([$name, $id]);
+        }
         json_response(['ok' => true]);
     } catch (PDOException $e) {
         json_response(['error' => 'Eintrag existiert bereits.'], 422);

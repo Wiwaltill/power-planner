@@ -56,3 +56,8 @@ body { background: var(--app-bg); }
   .print-title-wrap { display: flex; align-items: flex-start; gap: .6rem; }
   .print-logo { display:block !important; width:auto !important; height:auto !important; max-height: 18mm !important; max-width: 45mm !important; object-fit: contain !important; }
 }
+
+
+.print-qr{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9px;color:#444}
+.print-qr img{width:80px;height:80px;object-fit:contain}
+@media print{.print-qr img{width:70px;height:70px}.project-list-row{display:block!important}}

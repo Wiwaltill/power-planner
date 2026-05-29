@@ -63,6 +63,7 @@ foreach ($items as $item) {
     if (!isset($itemsByCircuitPhase[$cid][$phase])) { $itemsByCircuitPhase[$cid][$phase] = []; }
     $itemsByCircuitPhase[$cid][$phase][] = $item;
 }
+$currentProjectTags = project_tags($projectId);
 $companyLogo = setting_get('company_logo');
 $pageTitle = $project['name'] . ' · Öffentliche Ansicht'; $activePage = '';
 require __DIR__ . '/inc/header.php';
@@ -72,7 +73,7 @@ require __DIR__ . '/inc/header.php';
     <div>
       <div class="badge text-bg-info mb-2"><i class="bi bi-globe2 me-1"></i>Öffentliche Projektansicht</div>
       <h1 class="h3 mb-1"><?= e($project['name']) ?></h1>
-      <div class="text-muted"><?= e($project['client'] ?: 'Kein Kunde') ?> · <?= e($project['technician'] ?: 'Kein Techniker') ?></div>
+      <div class="text-muted"><?= e($project['client'] ?: 'Kein Kunde') ?> · <?= e($project['technician'] ?: 'Kein Techniker') ?></div><div class="mt-2"><span class="badge text-bg-<?= e(project_status_badge($project['status'] ?? 'planning')) ?>"><?= e(project_status_label($project['status'] ?? 'planning')) ?></span><?php foreach ($currentProjectTags as $tag): ?> <span class="badge text-bg-<?= e($tag['color'] ?: 'secondary') ?>"><?= e($tag['name']) ?></span><?php endforeach; ?></div>
     </div>
     <button class="btn btn-outline-primary" type="button" onclick="window.print()"><i class="bi bi-printer me-1"></i>Drucken / PDF</button>
   </div>
@@ -134,7 +135,7 @@ require __DIR__ . '/inc/header.php';
           <p><?= e($project['name']) ?> · <?= e($project['client'] ?: 'Kein Kunde') ?></p>
         </div>
       </div>
-      <div class="print-meta"><?= date('d.m.Y') ?></div>
+      <div class="print-meta"><?= date('d.m.Y') ?></div><div class="print-qr public-print-qr"><img src="<?= e(qr_png_url(app_full_url('public-project?token=' . urlencode($project['public_share_token'])), 120)) ?>" alt="QR-Code"><div>Web-Share</div></div>
     </div>
 
     <?php foreach ($circuits as $c): $cid = (int)$c['id']; $row = $summary[$cid] ?? ['L1'=>0,'L2'=>0,'L3'=>0]; ?>
