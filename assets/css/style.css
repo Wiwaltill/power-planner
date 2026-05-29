@@ -83,4 +83,8 @@ body { background: var(--app-bg); }
   .phase-dropzone { min-height: auto; }
   .phase-items { min-height: 180px; }
 }
-@media print { .project-tabs, .breadcrumb, .project-hero { display: none !important; } }
+@media print {
+  main.project-workspace > :not(.print-area) { display: none !important; }
+  main.project-workspace .print-area { display: block !important; }
+  .project-tabs, .breadcrumb, .project-hero, .tab-content, .alert { display: none !important; }
+}
