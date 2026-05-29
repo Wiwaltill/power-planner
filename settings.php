@@ -98,6 +98,19 @@ require __DIR__ . '/inc/header.php';
         <div id="connectorRows" class="list-group"></div>
       </div>
     </div>
+
+    <div class="col-12">
+      <div class="card p-4 border-info border-2">
+        <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center">
+          <div>
+            <h2 class="h4 mb-1"><i class="bi bi-activity me-2"></i>Systemcheck</h2>
+            <p class="small text-muted mb-0">PHP-Version, Erweiterungen, Schreibrechte, MySQL und Migrationen prüfen.</p>
+          </div>
+          <a class="btn btn-outline-info" href="<?= e(app_url('system-check')) ?>"><i class="bi bi-clipboard-check me-1"></i>System prüfen</a>
+        </div>
+      </div>
+    </div>
+
     <div class="col-12">
       <div class="card p-4 border-primary border-2">
         <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center">
