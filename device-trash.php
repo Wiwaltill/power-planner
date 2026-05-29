@@ -1,0 +1,1 @@
+<?php // device trash feature ?>

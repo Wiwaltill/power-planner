@@ -20,7 +20,7 @@ function ensure_schema(): void {
         version VARCHAR(50) NOT NULL PRIMARY KEY,
         applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-    $pdo->exec("INSERT IGNORE INTO schema_migrations (version) VALUES ('1.4.0')");
+    $pdo->exec("INSERT IGNORE INTO schema_migrations (version) VALUES ('1.5.0')");
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS project_shares (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -94,6 +94,12 @@ function ensure_schema(): void {
     if (table_exists($pdo, 'projects')) {
         if (!column_exists($pdo, 'projects', 'deleted_at')) $pdo->exec("ALTER TABLE projects ADD deleted_at DATETIME NULL");
         if (!column_exists($pdo, 'projects', 'deleted_by')) $pdo->exec("ALTER TABLE projects ADD deleted_by INT UNSIGNED NULL");
+        if (!column_exists($pdo, 'projects', 'archived_at')) $pdo->exec("ALTER TABLE projects ADD archived_at DATETIME NULL");
+        if (!column_exists($pdo, 'projects', 'public_share_expires_at')) $pdo->exec("ALTER TABLE projects ADD public_share_expires_at DATETIME NULL");
+        if (!column_exists($pdo, 'projects', 'public_share_password_hash')) $pdo->exec("ALTER TABLE projects ADD public_share_password_hash VARCHAR(255) NULL");
+    }
+    if (table_exists($pdo, 'devices') && !column_exists($pdo, 'devices', 'deleted_at')) {
+        $pdo->exec("ALTER TABLE devices ADD deleted_at DATETIME NULL");
     }
     if (table_exists($pdo, 'project_shares') && !column_exists($pdo, 'project_shares', 'permission')) {
         $pdo->exec("ALTER TABLE project_shares ADD permission ENUM('view','edit','manage') NOT NULL DEFAULT 'view'");

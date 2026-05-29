@@ -12,7 +12,7 @@ $shareMessage = '';
 $shareError = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
-    $manageActions = ['share_project','unshare_project','update_share_permission','enable_public_share','disable_public_share','regenerate_public_share'];
+    $manageActions = ['share_project','unshare_project','update_share_permission','enable_public_share','disable_public_share','regenerate_public_share','update_public_share'];
     $ownerActions = ['transfer_owner'];
     if (in_array($action, $manageActions, true) && !$canManage) { $shareError = 'Keine Verwaltungsrechte für dieses Projekt.'; $action = ''; }
     if (in_array($action, $ownerActions, true) && !$canOwner) { $shareError = 'Nur der Besitzer darf diese Aktion ausführen.'; $action = ''; }
@@ -85,6 +85,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $project = user_project($projectId, (int)$user['id']);
         $shareMessage = 'Web-Link wurde neu erstellt.';
     }
+    if ($action === 'update_public_share') {
+        $expires = trim((string)($_POST['public_share_expires_at'] ?? ''));
+        $expiresValue = $expires !== '' ? str_replace('T', ' ', $expires) . ':00' : null;
+        $password = (string)($_POST['public_share_password'] ?? '');
+        $clearPassword = !empty($_POST['clear_public_share_password']);
+        if ($password !== '') {
+            $hash = password_hash($password, PASSWORD_DEFAULT);
+            db()->prepare('UPDATE projects SET public_share_expires_at = ?, public_share_password_hash = ? WHERE id = ?')->execute([$expiresValue, $hash, $projectId]);
+        } elseif ($clearPassword) {
+            db()->prepare('UPDATE projects SET public_share_expires_at = ?, public_share_password_hash = NULL WHERE id = ?')->execute([$expiresValue, $projectId]);
+        } else {
+            db()->prepare('UPDATE projects SET public_share_expires_at = ? WHERE id = ?')->execute([$expiresValue, $projectId]);
+        }
+        $project = user_project($projectId, (int)$user['id']);
+        $shareMessage = 'Web-Freigabe wurde aktualisiert.';
+    }
 }
 $shareUsers = [];
 $availableShareUsers = [];
@@ -110,6 +126,7 @@ $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageSc
   <?php if ($shareMessage): ?><div class="alert alert-success"><?= e($shareMessage) ?></div><?php endif; ?>
   <?php if ($shareError): ?><div class="alert alert-danger"><?= e($shareError) ?></div><?php endif; ?>
   <?php if (isset($_GET['imported'])): ?><div class="alert alert-success">Projekt wurde erfolgreich importiert.</div><?php endif; ?>
+  <?php if (isset($_GET['duplicated'])): ?><div class="alert alert-success">Projekt wurde dupliziert.</div><?php endif; ?>
   <div class="card p-3 p-md-4 mb-4">
     <div class="row g-3 align-items-end">
       <div class="col-md-4"><label class="form-label">Aktiver Stromkreis</label><select class="form-select" id="activeCircuitSelect"></select></div>
@@ -155,6 +172,14 @@ $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageSc
         <input class="form-control" id="publicShareUrl" readonly value="<?= e(app_full_url('public-project?token=' . urlencode($project['public_share_token']))) ?>" onclick="this.select()">
         <button class="btn btn-outline-primary copy-public-link" type="button" data-link="<?= e(app_full_url('public-project?token=' . urlencode($project['public_share_token']))) ?>"><i class="bi bi-clipboard me-1"></i>Kopieren</button>
       </div>
+      <form method="post" class="row g-3 mb-3">
+        <input type="hidden" name="action" value="update_public_share">
+        <div class="col-md-4"><label class="form-label">Optional gültig bis</label><input class="form-control" type="datetime-local" name="public_share_expires_at" value="<?= !empty($project['public_share_expires_at']) ? e(str_replace(' ', 'T', substr($project['public_share_expires_at'],0,16))) : '' ?>"></div>
+        <div class="col-md-4"><label class="form-label">Optionales Passwort</label><input class="form-control" type="password" name="public_share_password" placeholder="leer lassen = unverändert"></div>
+        <div class="col-md-2 d-flex align-items-end"><div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="clear_public_share_password" id="clearSharePassword"><label class="form-check-label small" for="clearSharePassword">Passwort entfernen</label></div></div>
+        <div class="col-md-2 d-flex align-items-end"><button class="btn btn-outline-primary w-100">Speichern</button></div>
+        <div class="col-12 small text-muted">Status: <?= !empty($project['public_share_password_hash']) ? 'Passwortschutz aktiv' : 'Kein Passwortschutz' ?><?= !empty($project['public_share_expires_at']) ? ' · gültig bis ' . e($project['public_share_expires_at']) : '' ?></div>
+      </form>
       <div class="d-flex gap-2 flex-wrap">
         <form method="post"><input type="hidden" name="action" value="disable_public_share"><button class="btn btn-outline-danger">Web-Link deaktivieren</button></form>
         <form method="post" data-confirm="Der bisherige Web-Link wird ungültig. Neuen Link erstellen?" data-confirm-title="Web-Link erneuern" data-confirm-button="Neu erstellen"><input type="hidden" name="action" value="regenerate_public_share"><button class="btn btn-outline-secondary">Link neu erstellen</button></form>

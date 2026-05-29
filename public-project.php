@@ -1,4 +1,5 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) session_start();
 require_once __DIR__ . '/inc/db.php';
 require_once __DIR__ . '/inc/migrations.php';
 require_once __DIR__ . '/inc/helpers.php';
@@ -12,6 +13,29 @@ if (!$project) {
     echo '<main class="container py-5 flex-grow-1"><div class="alert alert-warning">Dieser öffentliche Projektlink ist ungültig oder wurde deaktiviert.</div></main>';
     require __DIR__ . '/inc/footer.php';
     exit;
+}
+if (public_project_requires_password($project)) {
+    $sessionKey = 'public_project_ok_' . (string)$project['public_share_token'];
+    $ok = !empty($_SESSION[$sessionKey]);
+    $error = '';
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $password = (string)($_POST['share_password'] ?? '');
+        if (public_project_password_ok($project, $password)) {
+            $_SESSION[$sessionKey] = true;
+            $ok = true;
+        } else {
+            $error = 'Das Passwort ist nicht korrekt.';
+        }
+    }
+    if (!$ok) {
+        $pageTitle = $project['name'] . ' · Passwort erforderlich'; $activePage = '';
+        require __DIR__ . '/inc/header.php';
+        echo '<main class="container py-5 flex-grow-1"><div class="row justify-content-center"><div class="col-md-5"><div class="card p-4"><h1 class="h4 mb-3">Passwort erforderlich</h1>';
+        if ($error) echo '<div class="alert alert-danger">' . e($error) . '</div>';
+        echo '<form method="post"><label class="form-label">Passwort</label><input class="form-control mb-3" type="password" name="share_password" required autofocus><button class="btn btn-primary w-100">Projekt öffnen</button></form></div></div></div></main>';
+        require __DIR__ . '/inc/footer.php';
+        exit;
+    }
 }
 $projectId = (int)$project['id'];
 $stmt = db()->prepare('SELECT * FROM circuits WHERE project_id = ? ORDER BY id');

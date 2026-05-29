@@ -85,7 +85,8 @@ try {
         $shareUserId = (int)$stmt->fetchColumn();
         if ($shareUserId > 0 && $shareUserId !== (int)$user['id']) {
             $stmt = $pdo->prepare('INSERT INTO project_shares (project_id, user_id, permission) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE permission = VALUES(permission)');
-            $stmt->execute([$newProjectId, $shareUserId]);
+            $permission = in_array(($share['permission'] ?? 'view'), ['view','edit','manage'], true) ? $share['permission'] : 'view';
+            $stmt->execute([$newProjectId, $shareUserId, $permission]);
         }
     }
 

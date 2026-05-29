@@ -1,6 +1,6 @@
 <?php
 if (!defined('APP_GITHUB_URL')) { define('APP_GITHUB_URL', 'https://github.com/Wiwaltill/power-planner/'); }
-if (!defined('APP_VERSION')) { define('APP_VERSION', '1.4.2'); }
+if (!defined('APP_VERSION')) { define('APP_VERSION', '1.5.0'); }
 function e($value): string { return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8'); }
 function json_response($data, int $status = 200): void {
     http_response_code($status);
@@ -97,9 +97,48 @@ function generate_share_token(): string {
 function public_project_by_token(string $token): ?array {
     if ($token === '') return null;
     ensure_schema();
-    $stmt = db()->prepare('SELECT p.*, u.name AS owner_name, u.email AS owner_email FROM projects p JOIN users u ON u.id = p.user_id WHERE p.public_share_enabled = 1 AND p.public_share_token = ? LIMIT 1');
+    $stmt = db()->prepare('SELECT p.*, u.name AS owner_name, u.email AS owner_email FROM projects p JOIN users u ON u.id = p.user_id WHERE p.public_share_enabled = 1 AND p.public_share_token = ? AND (p.public_share_expires_at IS NULL OR p.public_share_expires_at >= NOW()) LIMIT 1');
     $stmt->execute([$token]);
     return $stmt->fetch() ?: null;
+}
+function public_project_requires_password(array $project): bool {
+    return !empty($project['public_share_password_hash']);
+}
+function public_project_password_ok(array $project, string $password): bool {
+    if (!public_project_requires_password($project)) return true;
+    return password_verify($password, (string)$project['public_share_password_hash']);
+}
+function duplicate_project(int $projectId, int $userId): int {
+    $project = user_project($projectId, $userId);
+    if (!$project || !project_can_edit($project)) throw new RuntimeException('Projekt nicht gefunden oder keine Berechtigung.');
+    $pdo = db();
+    $pdo->beginTransaction();
+    try {
+        $stmt = $pdo->prepare('INSERT INTO projects (user_id, name, client, technician) VALUES (?, ?, ?, ?)');
+        $stmt->execute([$userId, $project['name'] . ' (Kopie)', $project['client'] ?? '', $project['technician'] ?? '']);
+        $newProjectId = (int)$pdo->lastInsertId();
+        $map = [];
+        $stmt = $pdo->prepare('SELECT * FROM circuits WHERE project_id = ? ORDER BY id');
+        $stmt->execute([$projectId]);
+        foreach ($stmt->fetchAll() as $c) {
+            $ins = $pdo->prepare('INSERT INTO circuits (project_id, name, amp_limit) VALUES (?, ?, ?)');
+            $ins->execute([$newProjectId, $c['name'], $c['amp_limit'] ?? 16]);
+            $map[(int)$c['id']] = (int)$pdo->lastInsertId();
+        }
+        $stmt = $pdo->prepare('SELECT * FROM plan_items WHERE project_id = ? ORDER BY id');
+        $stmt->execute([$projectId]);
+        foreach ($stmt->fetchAll() as $i) {
+            $cid = $map[(int)$i['circuit_id']] ?? null;
+            if (!$cid) continue;
+            $ins = $pdo->prepare('INSERT INTO plan_items (project_id, circuit_id, device_id, name, brand, category, quantity, phase, power_w, voltage_v, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            $ins->execute([$newProjectId, $cid, $i['device_id'] ?: null, $i['name'], $i['brand'], $i['category'], $i['quantity'], $i['phase'], $i['power_w'], $i['voltage_v'], $i['remarks']]);
+        }
+        $pdo->commit();
+        return $newProjectId;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
+    }
 }
 
 

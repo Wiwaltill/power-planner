@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS devices (
   voltage_v INT UNSIGNED NOT NULL DEFAULT 230,
   connector VARCHAR(120) DEFAULT '',
   notes TEXT NULL,
+  deleted_at DATETIME NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_devices_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -32,6 +33,9 @@ CREATE TABLE IF NOT EXISTS projects (
   technician VARCHAR(190) DEFAULT '',
   public_share_token VARCHAR(96) NULL,
   public_share_enabled TINYINT(1) NOT NULL DEFAULT 0,
+  public_share_expires_at DATETIME NULL,
+  public_share_password_hash VARCHAR(255) NULL,
+  archived_at DATETIME NULL,
   deleted_at DATETIME NULL,
   deleted_by INT UNSIGNED NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -129,4 +133,4 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
   version VARCHAR(50) NOT NULL PRIMARY KEY,
   applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-INSERT IGNORE INTO schema_migrations (version) VALUES ('1.4.0');
+INSERT IGNORE INTO schema_migrations (version) VALUES ('1.5.0');

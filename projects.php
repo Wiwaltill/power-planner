@@ -7,6 +7,36 @@ ensure_schema();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? 'create';
 
+    if ($action === 'duplicate') {
+        $projectId = (int)($_POST['project_id'] ?? 0);
+        try {
+            $newId = duplicate_project($projectId, (int)$user['id']);
+            header('Location: project?id=' . $newId . '&duplicated=1'); exit;
+        } catch (Throwable $e) {
+            header('Location: projects?duplicate_error=1'); exit;
+        }
+    }
+
+    if ($action === 'archive') {
+        $projectId = (int)($_POST['project_id'] ?? 0);
+        $project = user_project($projectId, (int)$user['id']);
+        if ($project && project_can_manage($project)) {
+            db()->prepare('UPDATE projects SET archived_at = NOW() WHERE id = ?')->execute([$projectId]);
+            header('Location: projects?archived=1'); exit;
+        }
+        header('Location: projects?archive_error=1'); exit;
+    }
+
+    if ($action === 'unarchive') {
+        $projectId = (int)($_POST['project_id'] ?? 0);
+        $project = user_project($projectId, (int)$user['id'], true);
+        if ($project && project_can_manage($project)) {
+            db()->prepare('UPDATE projects SET archived_at = NULL WHERE id = ?')->execute([$projectId]);
+            header('Location: projects?unarchived=1'); exit;
+        }
+        header('Location: projects?archive_error=1'); exit;
+    }
+
     if ($action === 'delete') {
         $projectId = (int)($_POST['project_id'] ?? 0);
         $confirm = (string)($_POST['confirm_project_name'] ?? '');
@@ -65,12 +95,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$stmt = db()->prepare('SELECT p.*, u.name AS owner_name, u.email AS owner_email, CASE WHEN p.user_id = ? THEN 1 ELSE 0 END AS is_owner, COALESCE(ps.permission, CASE WHEN p.user_id = ? THEN \'manage\' ELSE ps.permission END) AS permission, COUNT(DISTINCT c.id) circuits, COUNT(DISTINCT i.id) items FROM projects p JOIN users u ON u.id = p.user_id LEFT JOIN project_shares ps ON ps.project_id = p.id AND ps.user_id = ? LEFT JOIN circuits c ON c.project_id = p.id LEFT JOIN plan_items i ON i.project_id = p.id WHERE p.deleted_at IS NULL AND (p.user_id = ? OR ps.user_id = ?) GROUP BY p.id ORDER BY p.updated_at DESC');
+$stmt = db()->prepare('SELECT p.*, u.name AS owner_name, u.email AS owner_email, CASE WHEN p.user_id = ? THEN 1 ELSE 0 END AS is_owner, COALESCE(ps.permission, CASE WHEN p.user_id = ? THEN \'manage\' ELSE ps.permission END) AS permission, COUNT(DISTINCT c.id) circuits, COUNT(DISTINCT i.id) items FROM projects p JOIN users u ON u.id = p.user_id LEFT JOIN project_shares ps ON ps.project_id = p.id AND ps.user_id = ? LEFT JOIN circuits c ON c.project_id = p.id LEFT JOIN plan_items i ON i.project_id = p.id WHERE p.deleted_at IS NULL AND p.archived_at IS NULL AND (p.user_id = ? OR ps.user_id = ?) GROUP BY p.id ORDER BY p.updated_at DESC');
 $stmt->execute([(int)$user['id'], (int)$user['id'], (int)$user['id'], (int)$user['id'], (int)$user['id']]);
 $projects = $stmt->fetchAll();
 $trashStmt = db()->prepare('SELECT p.*, COUNT(DISTINCT c.id) circuits, COUNT(DISTINCT i.id) items FROM projects p LEFT JOIN circuits c ON c.project_id = p.id LEFT JOIN plan_items i ON i.project_id = p.id WHERE p.deleted_at IS NOT NULL AND p.user_id = ? GROUP BY p.id ORDER BY p.deleted_at DESC');
 $trashStmt->execute([(int)$user['id']]);
 $trashProjects = $trashStmt->fetchAll();
+$archiveStmt = db()->prepare('SELECT p.*, u.name AS owner_name, u.email AS owner_email, CASE WHEN p.user_id = ? THEN 1 ELSE 0 END AS is_owner, COALESCE(ps.permission, CASE WHEN p.user_id = ? THEN \'manage\' ELSE ps.permission END) AS permission, COUNT(DISTINCT c.id) circuits, COUNT(DISTINCT i.id) items FROM projects p JOIN users u ON u.id = p.user_id LEFT JOIN project_shares ps ON ps.project_id = p.id AND ps.user_id = ? LEFT JOIN circuits c ON c.project_id = p.id LEFT JOIN plan_items i ON i.project_id = p.id WHERE p.deleted_at IS NULL AND p.archived_at IS NOT NULL AND (p.user_id = ? OR ps.user_id = ?) GROUP BY p.id ORDER BY p.archived_at DESC');
+$archiveStmt->execute([(int)$user['id'], (int)$user['id'], (int)$user['id'], (int)$user['id'], (int)$user['id']]);
+$archivedProjects = $archiveStmt->fetchAll();
 $pageTitle = 'Projekte';
 $activePage = 'projects';
 require __DIR__ . '/inc/header.php';
@@ -80,6 +113,9 @@ require __DIR__ . '/inc/header.php';
   <?php if (isset($_GET['restored'])): ?><div class="alert alert-success">Projekt wurde wiederhergestellt.</div><?php endif; ?>
   <?php if (isset($_GET['purged'])): ?><div class="alert alert-success">Projekt wurde endgültig gelöscht.</div><?php endif; ?>
   <?php if (isset($_GET['delete_error'])): ?><div class="alert alert-danger">Projekt konnte nicht gelöscht werden. Bitte prüfe die Bestätigung.</div><?php endif; ?>
+  <?php if (isset($_GET['archived'])): ?><div class="alert alert-success">Projekt wurde archiviert.</div><?php endif; ?>
+  <?php if (isset($_GET['unarchived'])): ?><div class="alert alert-success">Projekt wurde reaktiviert.</div><?php endif; ?>
+  <?php if (isset($_GET['duplicate_error'])): ?><div class="alert alert-danger">Projekt konnte nicht dupliziert werden.</div><?php endif; ?>
   <?php if (isset($_GET['import_error'])): ?><div class="alert alert-danger">Projekt konnte nicht importiert werden. Bitte prüfe die JSON-Datei.</div><?php endif; ?>
   <div class="row g-4">
     <div class="col-lg-4">
@@ -120,6 +156,8 @@ require __DIR__ . '/inc/header.php';
                 </a>
                 <div class="d-flex gap-2">
                   <a class="btn btn-sm btn-outline-primary" href="<?= e(app_url('project?id=' . (int)$p['id'])) ?>">Öffnen</a>
+                  <form method="post" class="d-inline"><input type="hidden" name="action" value="duplicate"><input type="hidden" name="project_id" value="<?= (int)$p['id'] ?>"><button class="btn btn-sm btn-outline-secondary">Duplizieren</button></form>
+                  <?php if (project_can_manage($p)): ?><form method="post" class="d-inline" data-confirm="Projekt archivieren?" data-confirm-title="Projekt archivieren" data-confirm-button="Archivieren"><input type="hidden" name="action" value="archive"><input type="hidden" name="project_id" value="<?= (int)$p['id'] ?>"><button class="btn btn-sm btn-outline-warning">Archivieren</button></form><?php endif; ?>
                   <?php if ((int)$p['is_owner'] === 1): ?>
                     <button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteProjectModal<?= (int)$p['id'] ?>">Löschen</button>
                   <?php endif; ?>
@@ -155,6 +193,24 @@ require __DIR__ . '/inc/header.php';
         <?php endif; ?>
       </div>
     
+      <div class="card p-4 mt-4">
+        <h2 class="h4 mb-3"><i class="bi bi-archive me-2"></i>Archiv</h2>
+        <?php if (!$archivedProjects): ?>
+          <p class="text-muted mb-0">Keine archivierten Projekte.</p>
+        <?php else: ?>
+          <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Projekt</th><th>Archiviert am</th><th>Inhalt</th><th class="text-end">Aktion</th></tr></thead><tbody>
+          <?php foreach ($archivedProjects as $p): ?>
+            <tr>
+              <td class="fw-semibold"><?= e($p['name']) ?></td>
+              <td><?= e($p['archived_at']) ?></td>
+              <td><?= (int)$p['circuits'] ?> Stromkreis(e), <?= (int)$p['items'] ?> Position(en)</td>
+              <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="<?= e(app_url('project?id=' . (int)$p['id'])) ?>">Öffnen</a> <form method="post" class="d-inline"><input type="hidden" name="action" value="unarchive"><input type="hidden" name="project_id" value="<?= (int)$p['id'] ?>"><button class="btn btn-sm btn-outline-success">Reaktivieren</button></form></td>
+            </tr>
+          <?php endforeach; ?>
+          </tbody></table></div>
+        <?php endif; ?>
+      </div>
+
       <div class="card p-4 mt-4">
         <h2 class="h4 mb-3"><i class="bi bi-trash me-2"></i>Papierkorb</h2>
         <?php if (!$trashProjects): ?>
