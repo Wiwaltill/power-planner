@@ -202,14 +202,14 @@ $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageSc
   <?php if (isset($_GET['duplicated'])): ?><div class="alert alert-success">Projekt wurde dupliziert.</div><?php endif; ?>
   <?php if (isset($_GET['unarchived'])): ?><div class="alert alert-success">Projekt wurde reaktiviert.</div><?php endif; ?>
 
-  <ul class="nav nav-pills project-tabs mb-4 overflow-auto flex-nowrap" id="projectTabs" role="tablist">
-    <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-overview" type="button"><i class="bi bi-speedometer2 me-1"></i>Übersicht</button></li>
-    <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-power" type="button"><i class="bi bi-lightning-charge me-1"></i>Stromplanung</button></li>
-    <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-devices" type="button"><i class="bi bi-hdd-rack me-1"></i>Geräte</button></li>
-    <?php if ($canManage): ?><li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-shares" type="button"><i class="bi bi-people me-1"></i>Freigaben</button></li><?php endif; ?>
-    <?php if ($canManage): ?><li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-web" type="button"><i class="bi bi-globe2 me-1"></i>Web-Freigabe</button></li><?php endif; ?>
-    <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-exports" type="button"><i class="bi bi-box-arrow-down me-1"></i>Exporte</button></li>
-    <?php if ($canManage): ?><li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-settings" type="button"><i class="bi bi-gear me-1"></i>Einstellungen</button></li><?php endif; ?>
+  <ul class="nav nav-tabs project-tabs mb-4 overflow-auto flex-nowrap" id="projectTabs" role="tablist">
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-overview" type="button"><i class="bi bi-speedometer2 me-1"></i>Übersicht</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-power" type="button"><i class="bi bi-lightning-charge me-1"></i>Stromplanung</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-devices" type="button"><i class="bi bi-hdd-rack me-1"></i>Geräte</button></li>
+    <?php if ($canManage): ?><li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-shares" type="button"><i class="bi bi-people me-1"></i>Freigaben</button></li><?php endif; ?>
+    <?php if ($canManage): ?><li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-web" type="button"><i class="bi bi-globe2 me-1"></i>Web-Freigabe</button></li><?php endif; ?>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-exports" type="button"><i class="bi bi-box-arrow-down me-1"></i>Exporte</button></li>
+    <?php if ($canManage): ?><li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-settings" type="button"><i class="bi bi-gear me-1"></i>Einstellungen</button></li><?php endif; ?>
   </ul>
 
   <div class="tab-content">

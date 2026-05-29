@@ -65,9 +65,8 @@ body { background: var(--app-bg); }
 /* Project workspace UX refresh */
 .project-workspace .breadcrumb { --bs-breadcrumb-divider: '›'; }
 .project-hero { background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%); }
-.project-tabs { gap: .5rem; padding-bottom: .25rem; }
-.project-tabs .nav-link { white-space: nowrap; border-radius: 999px; color: #475569; background: #fff; border: 1px solid #e2e8f0; box-shadow: 0 4px 14px rgba(15,23,42,.05); }
-.project-tabs .nav-link.active { color: #fff; box-shadow: 0 8px 20px rgba(13,110,253,.22); }
+.project-tabs { border-bottom: 1px solid #dee2e6; }
+.project-tabs .nav-link { white-space: nowrap; }
 .metric-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: .9rem; padding: 1rem; height: 100%; }
 .metric-card span { display: block; color: #64748b; font-size: .84rem; margin-bottom: .25rem; }
 .metric-card strong { display: block; font-size: clamp(1.35rem, 4vw, 2rem); line-height: 1.1; }
