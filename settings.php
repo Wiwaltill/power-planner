@@ -111,7 +111,7 @@ require __DIR__ . '/inc/header.php';
             <option value="success">Grün</option>
             <option value="warning">Gelb</option>
             <option value="danger">Rot</option>
-            <option value="info">Info</option>
+            <option value="info">Hellblau</option>
             <option value="dark">Dunkel</option>
           </select>
           <button class="btn btn-primary">Hinzufügen</button>

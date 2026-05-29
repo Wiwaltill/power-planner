@@ -1,5 +1,5 @@
 const apiSettings = (window.APP_BASE_PATH || '') + '/api/settings';
-const tagColorLabels = {secondary:'Grau', primary:'Blau', success:'Grün', warning:'Gelb', danger:'Rot', info:'Info', dark:'Dunkel'};
+const tagColorLabels = {secondary:'Grau', primary:'Blau', success:'Grün', warning:'Gelb', danger:'Rot', info:'Hellblau', dark:'Dunkel'};
 const escSettings = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 async function settingsJson(url, opts={}) {
   const r = await fetch(url, {credentials:'same-origin', ...opts});
