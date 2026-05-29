@@ -164,13 +164,6 @@ $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageSc
 ?>
 <script>window.APP_PROJECT_ID = <?= (int)$project['id'] ?>; window.APP_CAN_EDIT = <?= $canEdit ? 'true' : 'false' ?>; window.APP_PROJECT_ARCHIVED = <?= $isArchived ? 'true' : 'false' ?>;</script>
 <main class="container py-4 flex-grow-1 project-workspace">
-  <nav aria-label="Breadcrumb" class="mb-3">
-    <ol class="breadcrumb mb-0">
-      <li class="breadcrumb-item"><a href="<?= e(app_url('projects')) ?>">Projekte</a></li>
-      <li class="breadcrumb-item active" aria-current="page"><?= e($project['name']) ?></li>
-    </ol>
-  </nav>
-
   <section class="project-hero card p-3 p-md-4 mb-4">
     <div class="d-flex flex-column flex-lg-row gap-3 justify-content-between align-items-lg-start">
       <div>
