@@ -33,6 +33,12 @@ const els = {
   remarks: $('remarks'),
   phaseBoards: $('phaseBoards'),
   planRows: $('planRows'),
+  projectDeviceRows: $('projectDeviceRows'),
+  metricCircuits: $('metricCircuits'),
+  metricItems: $('metricItems'),
+  metricWatts: $('metricWatts'),
+  metricMaxPhase: $('metricMaxPhase'),
+  metricPhaseBalance: $('metricPhaseBalance'),
   printSummary: $('printSummary'),
   printPhaseTables: $('printPhaseTables'),
   printRows: $('printRows'),
@@ -75,8 +81,25 @@ async function updateQuantity(id,v){ const i=plan.find(x=>Number(x.id)===Number(
 async function updateRemarks(id,v){ const i=plan.find(x=>Number(x.id)===Number(id)); await savePatch(i,{remarks:v}); }
 async function removeItem(id){ if(!canEditProject) return; await fetch(`${api.items}&id=${id}`,{method:'DELETE',credentials:'same-origin'}); await loadAll(); }
 window.updateQuantity=updateQuantity; window.updateRemarks=updateRemarks; window.removeItem=removeItem;
+
+function renderProjectMetrics(){
+  const totalWatts = plan.reduce((sum,i)=>sum+itemWatts(i),0);
+  const totalsAll={L1:{w:0,a:0},L2:{w:0,a:0},L3:{w:0,a:0}};
+  plan.forEach(i=>{ if(totalsAll[i.phase]){ totalsAll[i.phase].w += itemWatts(i); totalsAll[i.phase].a += itemAmps(i); } });
+  const maxPhase = phases.reduce((max,p)=>totalsAll[p].a>totalsAll[max].a?p:max,'L1');
+  if(els.metricCircuits) els.metricCircuits.textContent = circuits.length.toLocaleString('de-DE');
+  if(els.metricItems) els.metricItems.textContent = plan.length.toLocaleString('de-DE');
+  if(els.metricWatts) els.metricWatts.textContent = fmtW(totalWatts);
+  if(els.metricMaxPhase) els.metricMaxPhase.textContent = `${maxPhase} · ${fmtA(totalsAll[maxPhase].a)}`;
+  if(els.metricPhaseBalance) els.metricPhaseBalance.innerHTML = phases.map(p=>`<div class="d-flex justify-content-between"><span>${p}</span><strong>${fmtA(totalsAll[p].a)} · ${fmtW(totalsAll[p].w)}</strong></div>`).join('');
+}
+function renderProjectDevices(){
+  if(!els.projectDeviceRows) return;
+  els.projectDeviceRows.innerHTML = plan.length ? plan.map(i=>`<tr><td><strong>${esc(i.brand?i.brand+' · '+i.name:i.name)}</strong><div class="small-muted">${esc(i.remarks||'Keine Bemerkung')}</div></td><td>${esc(i.category||'-')}</td><td>${esc(circuitName(i.circuit_id))}</td><td><span class="badge text-bg-dark">${esc(i.phase)}</span></td><td>${i.quantity}</td><td>${fmtW(itemWatts(i))}<div class="small-muted">${fmtA(itemAmps(i))}</div></td><td>${canEditProject ? `<button class="btn btn-sm btn-outline-danger" onclick="removeItem(${i.id})"><i class="bi bi-trash3 me-1"></i>Entfernen</button>` : '<span class="text-muted small">Nur Lesen</span>'}</td></tr>`).join('') : '<tr><td colspan="7" class="text-center text-muted py-4">Noch keine Geräte im Projekt.</td></tr>';
+}
+
 function renderPrint(){ const totals=phaseTotals(); els.printSummary.innerHTML=`<div class="print-summary">${phases.map(p=>`<div class="print-summary-card"><div class="print-phase-name">${p}</div>${fmtW(totals[p].w)}<br>${fmtA(totals[p].a)}</div>`).join('')}</div>`; els.printPhaseTables.innerHTML=circuits.map(c=>`<h2>${esc(c.name)}</h2>`+phases.map(p=>`<h3>${p}</h3><table class="print-table"><tbody>${plan.filter(i=>Number(i.circuit_id)===Number(c.id)&&i.phase===p).map(i=>`<tr><td>${esc(i.name)}</td><td>${i.quantity}</td><td>${fmtW(itemWatts(i))}</td><td>${fmtA(itemAmps(i))}</td></tr>`).join('')||'<tr><td>Keine Geräte</td></tr>'}</tbody></table>`).join('')).join(''); els.printRows.innerHTML=plan.map(i=>`<tr><td>${esc(i.name)}</td><td>${esc(i.brand||'')}</td><td>${i.quantity}</td><td>${esc(circuitName(i.circuit_id))}</td><td>${i.phase}</td><td>${fmtW(itemWatts(i))}</td><td>${fmtA(itemAmps(i))}</td><td>${esc(i.remarks||'')}</td></tr>`).join(''); }
-function render(){ renderCircuitSelects(); renderDeviceSelect(); renderPhaseBoards(); renderRows(); renderPrint(); }
+function render(){ renderCircuitSelects(); renderDeviceSelect(); renderPhaseBoards(); renderRows(); renderProjectMetrics(); renderProjectDevices(); renderPrint(); }
 async function loadAll(){ [devices,circuits,plan]=await Promise.all([getJson(api.devices),getJson(api.circuits),getJson(api.items)]); if(!activeCircuit && circuits[0]) activeCircuit=circuits[0].id; renderCategoryFilter(); render(); }
 function registerDragAndDrop(){ if(!canEditProject) return; document.querySelectorAll('.plan-card').forEach(card=>{ card.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',card.dataset.id); card.classList.add('dragging');}); card.addEventListener('dragend',()=>card.classList.remove('dragging')); }); document.querySelectorAll('.phase-items').forEach(zone=>{ zone.addEventListener('dragover',e=>{e.preventDefault(); zone.closest('.phase-dropzone').classList.add('drag-over');}); zone.addEventListener('dragleave',()=>zone.closest('.phase-dropzone').classList.remove('drag-over')); zone.addEventListener('drop',async e=>{ e.preventDefault(); zone.closest('.phase-dropzone').classList.remove('drag-over'); const id=e.dataTransfer.getData('text/plain'); const i=plan.find(x=>String(x.id)===id); if(i) await savePatch(i,{phase:zone.dataset.phase,circuit_id:activeCircuit}); }); }); }
 els.loadForm.addEventListener('submit',async e=>{ e.preventDefault(); if(!canEditProject){ AppUI.warning('Archivierte oder schreibgeschützte Projekte können nicht bearbeitet werden.'); return; } const d=devices.find(x=>String(x.id)===els.deviceSelect.value); if(!d){ AppUI.warning('Bitte Gerät auswählen.'); return; } await sendJson(api.items,'POST',{device_id:d.id,circuit_id:els.circuitSelect.value,quantity:els.quantity.value,phase:els.phase.value,voltage_v:els.voltage.value,remarks:els.remarks.value}); els.loadForm.reset(); els.quantity.value=1; els.voltage.value=230; els.deviceSelect.value=''; await loadAll(); });
@@ -105,6 +128,24 @@ els.exportPdf.addEventListener('click',()=>{ renderPrint(); window.print(); });
 els.exportCsv.addEventListener('click',()=>{ const rows=[['Gerät','Marke','Anzahl','Stromkreis','Phase','Watt','Ampere','Bemerkung'],...plan.map(i=>[i.name,i.brand,i.quantity,circuitName(i.circuit_id),i.phase,itemWatts(i),itemAmps(i).toFixed(2),i.remarks||''])]; const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n'); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download='stromplan.csv'; a.click(); });
 els.autoDistribute.addEventListener('click',async()=>{ if(!canEditProject){ AppUI.warning('Archivierte oder schreibgeschützte Projekte können nicht bearbeitet werden.'); return; } const current=plan.filter(i=>Number(i.circuit_id)===Number(activeCircuit)); let totals={L1:0,L2:0,L3:0}; for(const i of current.sort((a,b)=>itemWatts(b)-itemWatts(a))){ const phase=phases.reduce((min,p)=>totals[p]<totals[min]?p:min,'L1'); totals[phase]+=itemAmps(i); await sendJson(`${api.items}&id=${i.id}`,'PATCH',{phase}); } await loadAll(); });
 els.clearPlan.addEventListener('click',async()=>{ if(!canEditProject){ AppUI.warning('Archivierte oder schreibgeschützte Projekte können nicht bearbeitet werden.'); return; } if(await AppUI.confirm('Gesamten Plan leeren?', {title:'Plan leeren', confirmText:'Leeren'})){ await fetch(`${api.items}&all=1`,{method:'DELETE',credentials:'same-origin'}); await loadAll(); }});
+
+function initProjectTabs(){
+  const tabs = document.querySelectorAll('#projectTabs [data-bs-toggle="pill"]');
+  if(!tabs.length || typeof bootstrap === 'undefined') return;
+  const activateFromHash = () => {
+    const hash = window.location.hash;
+    if(!hash) return;
+    const trigger = document.querySelector(`#projectTabs [data-bs-target="${hash}"]`);
+    if(trigger) bootstrap.Tab.getOrCreateInstance(trigger).show();
+  };
+  tabs.forEach(tab => tab.addEventListener('shown.bs.tab', event => {
+    const target = event.target.getAttribute('data-bs-target');
+    if(target) history.replaceState(null, '', target);
+  }));
+  activateFromHash();
+}
+initProjectTabs();
+
 loadAll();
 
 if(!canEditProject){ document.addEventListener('DOMContentLoaded',()=>{ ['loadForm','addCircuit','deleteCircuit','autoDistribute','clearPlan'].forEach(id=>{ const el=document.getElementById(id); if(el) el.disabled = true; }); document.querySelectorAll('#loadForm input,#loadForm select,#loadForm textarea,#loadForm button').forEach(el=>el.disabled=true); }); }
