@@ -1,4 +1,5 @@
 const apiSettings = (window.APP_BASE_PATH || '') + '/api/settings';
+const tagColorLabels = {secondary:'Grau', primary:'Blau', success:'Grün', warning:'Gelb', danger:'Rot', info:'Info', dark:'Dunkel'};
 const escSettings = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 async function settingsJson(url, opts={}) {
   const r = await fetch(url, {credentials:'same-origin', ...opts});
@@ -19,7 +20,7 @@ function renderSettings(type, rows, el) {
   if (!el) return;
   el.innerHTML = rows.length ? rows.map(row => {
     const colorSelect = type === 'tags' ? `<select class="form-select form-select-sm" data-color-edit style="max-width:120px">
-      ${['secondary','primary','success','warning','danger','info','dark'].map(c=>`<option value="${c}" ${row.color===c?'selected':''}>${c}</option>`).join('')}
+      ${['secondary','primary','success','warning','danger','info','dark'].map(c=>`<option value="${c}" ${row.color===c?'selected':''}>${tagColorLabels[c] || c}</option>`).join('')}
     </select>` : '';
     return `<div class="list-group-item d-flex gap-2 align-items-center"><input class="form-control form-control-sm" value="${escSettings(row.name)}" data-id="${row.id}" data-type="${type}">${colorSelect}<button class="btn btn-sm btn-outline-secondary" onclick="saveSetting('${type}', ${row.id}, this)">Speichern</button><button class="btn btn-sm btn-outline-danger" onclick="deleteSetting('${type}', ${row.id})">Löschen</button></div>`;
   }).join('') : '<div class="text-muted small">Noch keine Einträge.</div>';

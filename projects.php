@@ -147,7 +147,7 @@ require __DIR__ . '/inc/header.php';
   <?php if (isset($_GET['import_error'])): ?><div class="alert alert-danger">Projekt konnte nicht importiert werden. Bitte prüfe die JSON-Datei.</div><?php endif; ?>
   <div class="row g-4">
     <div class="col-lg-4">
-      <div class="card p-4 sticky-lg-top planner-form-card">
+      <div class="card p-4 planner-form-card">
         <h1 class="h3">Neues Projekt</h1>
         <form method="post" class="row g-3">
           <div class="col-12"><label class="form-label">Projektname</label><input class="form-control" name="name" required></div>
@@ -272,10 +272,16 @@ require __DIR__ . '/inc/header.php';
 </main>
 
 <script>
-document.getElementById('projectSearch')?.addEventListener('input', function(){
-  const q = this.value.toLowerCase().trim();
-  document.querySelectorAll('.project-list-row').forEach(row => {
-    row.style.display = !q || row.dataset.search.includes(q) ? '' : 'none';
+document.addEventListener('DOMContentLoaded', function(){
+  const input = document.getElementById('projectSearch');
+  if (!input) return;
+  const normalize = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  input.addEventListener('input', function(){
+    const q = normalize(this.value.trim());
+    document.querySelectorAll('.project-list-row').forEach(row => {
+      const haystack = normalize((row.dataset.search || '') + ' ' + row.innerText);
+      row.classList.toggle('d-none', !!q && !haystack.includes(q));
+    });
   });
 });
 </script>

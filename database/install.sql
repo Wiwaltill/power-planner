@@ -151,4 +151,4 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
   version VARCHAR(50) NOT NULL PRIMARY KEY,
   applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-INSERT IGNORE INTO schema_migrations (version) VALUES ('1.6.0');
+INSERT IGNORE INTO schema_migrations (version) VALUES ('1.6.1');
