@@ -37,6 +37,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: projects?archive_error=1'); exit;
     }
 
+    if ($action === 'leave_share') {
+        $projectId = (int)($_POST['project_id'] ?? 0);
+        $project = user_project($projectId, (int)$user['id'], true);
+        if ($project && (int)($project['is_owner'] ?? 0) !== 1) {
+            db()->prepare('DELETE FROM project_shares WHERE project_id = ? AND user_id = ?')->execute([$projectId, (int)$user['id']]);
+            header('Location: projects?share_removed=1'); exit;
+        }
+        header('Location: projects?share_remove_error=1'); exit;
+    }
+
     if ($action === 'delete') {
         $projectId = (int)($_POST['project_id'] ?? 0);
         $confirm = (string)($_POST['confirm_project_name'] ?? '');
@@ -144,6 +154,8 @@ require __DIR__ . '/inc/header.php';
   <?php if (isset($_GET['archived'])): ?><div class="alert alert-success">Projekt wurde archiviert.</div><?php endif; ?>
   <?php if (isset($_GET['unarchived'])): ?><div class="alert alert-success">Projekt wurde reaktiviert.</div><?php endif; ?>
   <?php if (isset($_GET['duplicate_error'])): ?><div class="alert alert-danger">Projekt konnte nicht dupliziert werden.</div><?php endif; ?>
+  <?php if (isset($_GET['share_removed'])): ?><div class="alert alert-success">Freigabe wurde entfernt. Das geteilte Projekt wird nicht mehr angezeigt.</div><?php endif; ?>
+  <?php if (isset($_GET['share_remove_error'])): ?><div class="alert alert-danger">Freigabe konnte nicht entfernt werden.</div><?php endif; ?>
   <?php if (isset($_GET['import_error'])): ?><div class="alert alert-danger">Projekt konnte nicht importiert werden. Bitte prüfe die JSON-Datei.</div><?php endif; ?>
   <div class="row g-4">
     <div class="col-lg-4">
@@ -202,9 +214,16 @@ require __DIR__ . '/inc/header.php';
                   <span class="small-muted d-block"><?= e($p['client'] ?: 'Kein Kunde') ?> · <?= (int)$p['circuits'] ?> Stromkreis(e) · <?= (int)$p['items'] ?> Position(en)</span>
                   <?php if ((int)$p['is_owner'] !== 1): ?><span class="small text-muted d-block">Besitzer: <?= e($p['owner_name']) ?> &lt;<?= e($p['owner_email']) ?>&gt;</span><?php endif; ?>
                 </a>
-                <div class="d-flex gap-2">
+                <div class="d-flex gap-2 flex-wrap justify-content-end">
                   <a class="btn btn-sm btn-outline-primary" href="<?= e(app_url('project?id=' . (int)$p['id'])) ?>">Öffnen</a>
                   <form method="post" class="d-inline"><input type="hidden" name="action" value="duplicate"><input type="hidden" name="project_id" value="<?= (int)$p['id'] ?>"><button class="btn btn-sm btn-outline-secondary">Duplizieren</button></form>
+                  <?php if ((int)$p['is_owner'] !== 1): ?>
+                    <form method="post" class="d-inline" data-confirm="Diese Freigabe wird für dich entfernt. Das Projekt verschwindet aus deiner Projektliste." data-confirm-title="Freigabe entfernen" data-confirm-button="Entfernen">
+                      <input type="hidden" name="action" value="leave_share">
+                      <input type="hidden" name="project_id" value="<?= (int)$p['id'] ?>">
+                      <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-x-circle me-1"></i>Freigabe entfernen</button>
+                    </form>
+                  <?php endif; ?>
                 </div>
               </div>
               <?php if ((int)$p['is_owner'] === 1): ?>
@@ -248,7 +267,15 @@ require __DIR__ . '/inc/header.php';
               <td class="fw-semibold"><?= e($p['name']) ?></td>
               <td><?= e($p['archived_at']) ?></td>
               <td><?= (int)$p['circuits'] ?> Stromkreis(e), <?= (int)$p['items'] ?> Position(en)</td>
-              <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="<?= e(app_url('project?id=' . (int)$p['id'])) ?>">Öffnen</a> <form method="post" class="d-inline"><input type="hidden" name="action" value="unarchive"><input type="hidden" name="project_id" value="<?= (int)$p['id'] ?>"><button class="btn btn-sm btn-outline-success">Reaktivieren</button></form></td>
+              <td class="text-end">
+                <a class="btn btn-sm btn-outline-primary" href="<?= e(app_url('project?id=' . (int)$p['id'])) ?>">Öffnen</a>
+                <?php if (project_can_manage_archived($p)): ?>
+                  <form method="post" class="d-inline"><input type="hidden" name="action" value="unarchive"><input type="hidden" name="project_id" value="<?= (int)$p['id'] ?>"><button class="btn btn-sm btn-outline-success">Reaktivieren</button></form>
+                <?php endif; ?>
+                <?php if ((int)$p['is_owner'] !== 1): ?>
+                  <form method="post" class="d-inline" data-confirm="Diese Freigabe wird für dich entfernt. Das Projekt verschwindet aus deiner Projektliste." data-confirm-title="Freigabe entfernen" data-confirm-button="Entfernen"><input type="hidden" name="action" value="leave_share"><input type="hidden" name="project_id" value="<?= (int)$p['id'] ?>"><button class="btn btn-sm btn-outline-danger">Freigabe entfernen</button></form>
+                <?php endif; ?>
+              </td>
             </tr>
           <?php endforeach; ?>
           </tbody></table></div>
