@@ -5,8 +5,9 @@ $user = require_login();
 ensure_schema();
 $pdo = db();
 $projectId = (int)($_GET['project_id'] ?? 0);
-if ($projectId <= 0 || !user_project($projectId, (int)$user['id'])) json_response(['error' => 'Projekt nicht gefunden.'], 404);
 $method = $_SERVER['REQUEST_METHOD'];
+if ($projectId <= 0) json_response(['error' => 'Projekt fehlt.'], 422);
+$project = require_project_access($projectId, (int)$user['id'], $method === 'GET' ? 'view' : 'edit');
 
 if ($method === 'GET') {
     $stmt = $pdo->prepare('SELECT i.*, c.name AS circuit_name FROM plan_items i JOIN circuits c ON c.id = i.circuit_id WHERE i.project_id = ? ORDER BY i.id');
@@ -48,6 +49,7 @@ if ($method === 'POST') {
         max(1, (int)($data['voltage_v'] ?? ($device['voltage_v'] ?? 230))),
         trim((string)($data['remarks'] ?? ''))
     ]);
+    log_project_activity($projectId, (int)$user['id'], 'Position angelegt', $name);
     json_response(['ok' => true, 'id' => (int)$pdo->lastInsertId()]);
 }
 
@@ -77,17 +79,20 @@ if ($method === 'PATCH') {
     $values[] = $projectId;
     $stmt = $pdo->prepare('UPDATE plan_items SET ' . implode(', ', $fields) . ' WHERE id = ? AND project_id = ?');
     $stmt->execute($values);
+    log_project_activity($projectId, (int)$user['id'], 'Position geändert', 'ID ' . $id);
     json_response(['ok' => true]);
 }
 
 if ($method === 'DELETE') {
     if (isset($_GET['all'])) {
         $pdo->prepare('DELETE FROM plan_items WHERE project_id = ?')->execute([$projectId]);
+        log_project_activity($projectId, (int)$user['id'], 'Plan geleert');
         json_response(['ok' => true]);
     }
     $id = (int)($_GET['id'] ?? 0);
     if ($id <= 0) json_response(['error' => 'ID fehlt.'], 422);
     $pdo->prepare('DELETE FROM plan_items WHERE id = ? AND project_id = ?')->execute([$id, $projectId]);
+    log_project_activity($projectId, (int)$user['id'], 'Position gelöscht', 'ID ' . $id);
     json_response(['ok' => true]);
 }
 

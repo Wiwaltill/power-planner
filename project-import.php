@@ -84,12 +84,13 @@ try {
         $stmt->execute([(string)$share['email']]);
         $shareUserId = (int)$stmt->fetchColumn();
         if ($shareUserId > 0 && $shareUserId !== (int)$user['id']) {
-            $stmt = $pdo->prepare('INSERT IGNORE INTO project_shares (project_id, user_id) VALUES (?, ?)');
+            $stmt = $pdo->prepare('INSERT INTO project_shares (project_id, user_id, permission) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE permission = VALUES(permission)');
             $stmt->execute([$newProjectId, $shareUserId]);
         }
     }
 
     $pdo->commit();
+    log_project_activity((int)$newProjectId, (int)$user['id'], 'Projekt importiert', $projectName);
     header('Location: project?id=' . $newProjectId . '&imported=1');
     exit;
 } catch (Throwable $e) {

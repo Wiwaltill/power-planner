@@ -1,6 +1,6 @@
 <?php
 if (!defined('APP_GITHUB_URL')) { define('APP_GITHUB_URL', 'https://github.com/Wiwaltill/power-planner/'); }
-if (!defined('APP_VERSION')) { define('APP_VERSION', '1.3.7'); }
+if (!defined('APP_VERSION')) { define('APP_VERSION', '1.4.0'); }
 function e($value): string { return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8'); }
 function json_response($data, int $status = 200): void {
     http_response_code($status);
@@ -12,10 +12,31 @@ function request_json(): array {
     $data = json_decode(file_get_contents('php://input'), true);
     return is_array($data) ? $data : [];
 }
-function user_project(int $projectId, int $userId): ?array {
-    $stmt = db()->prepare('SELECT p.*, u.name AS owner_name, u.email AS owner_email, CASE WHEN p.user_id = ? THEN 1 ELSE 0 END AS is_owner FROM projects p JOIN users u ON u.id = p.user_id LEFT JOIN project_shares ps ON ps.project_id = p.id AND ps.user_id = ? WHERE p.id = ? AND (p.user_id = ? OR ps.user_id IS NOT NULL) LIMIT 1');
-    $stmt->execute([$userId, $userId, $projectId, $userId]);
+function user_project(int $projectId, int $userId, bool $includeDeleted = false): ?array {
+    $deletedSql = $includeDeleted ? '' : ' AND p.deleted_at IS NULL';
+    $stmt = db()->prepare('SELECT p.*, u.name AS owner_name, u.email AS owner_email, CASE WHEN p.user_id = ? THEN 1 ELSE 0 END AS is_owner, COALESCE(ps.permission, CASE WHEN p.user_id = ? THEN \'manage\' ELSE NULL END) AS permission FROM projects p JOIN users u ON u.id = p.user_id LEFT JOIN project_shares ps ON ps.project_id = p.id AND ps.user_id = ? WHERE p.id = ? ' . $deletedSql . ' AND (p.user_id = ? OR ps.user_id IS NOT NULL) LIMIT 1');
+    $stmt->execute([$userId, $userId, $userId, $projectId, $userId]);
     return $stmt->fetch() ?: null;
+}
+function project_can_edit(array $project): bool {
+    return (int)($project['is_owner'] ?? 0) === 1 || in_array(($project['permission'] ?? ''), ['edit','manage'], true);
+}
+function project_can_manage(array $project): bool {
+    return (int)($project['is_owner'] ?? 0) === 1 || ($project['permission'] ?? '') === 'manage';
+}
+function require_project_access(int $projectId, int $userId, string $level = 'view'): array {
+    $project = user_project($projectId, $userId);
+    if (!$project) json_response(['error' => 'Projekt nicht gefunden.'], 404);
+    if ($level === 'edit' && !project_can_edit($project)) json_response(['error' => 'Nur Leserechte für dieses Projekt.'], 403);
+    if ($level === 'manage' && !project_can_manage($project)) json_response(['error' => 'Keine Verwaltungsrechte für dieses Projekt.'], 403);
+    return $project;
+}
+function log_project_activity(int $projectId, int $userId, string $action, string $details = ''): void {
+    try {
+        ensure_schema();
+        $stmt = db()->prepare('INSERT INTO project_activity (project_id, user_id, action, details) VALUES (?, ?, ?, ?)');
+        $stmt->execute([$projectId, $userId, $action, $details]);
+    } catch (Throwable $e) {}
 }
 function user_owns_project(int $projectId, int $userId): bool {
     $stmt = db()->prepare('SELECT COUNT(*) FROM projects WHERE id = ? AND user_id = ?');

@@ -17,6 +17,8 @@ $backupTables = [
     'circuits',
     'plan_items',
     'app_settings',
+    'project_activity',
+    'schema_migrations',
 ];
 
 function backup_table_exists(PDO $pdo, string $table): bool {

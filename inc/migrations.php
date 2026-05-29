@@ -16,6 +16,12 @@ function ensure_schema(): void {
     $pdo = db();
 
 
+    $pdo->exec("CREATE TABLE IF NOT EXISTS schema_migrations (
+        version VARCHAR(50) NOT NULL PRIMARY KEY,
+        applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    $pdo->exec("INSERT IGNORE INTO schema_migrations (version) VALUES ('1.4.0')");
+
     $pdo->exec("CREATE TABLE IF NOT EXISTS project_shares (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         project_id INT UNSIGNED NOT NULL,
@@ -84,4 +90,22 @@ function ensure_schema(): void {
         }
         try { $pdo->exec("CREATE UNIQUE INDEX idx_projects_public_share_token ON projects (public_share_token)"); } catch (Throwable $e) {}
     }
+
+    if (table_exists($pdo, 'projects')) {
+        if (!column_exists($pdo, 'projects', 'deleted_at')) $pdo->exec("ALTER TABLE projects ADD deleted_at DATETIME NULL");
+        if (!column_exists($pdo, 'projects', 'deleted_by')) $pdo->exec("ALTER TABLE projects ADD deleted_by INT UNSIGNED NULL");
+    }
+    if (table_exists($pdo, 'project_shares') && !column_exists($pdo, 'project_shares', 'permission')) {
+        $pdo->exec("ALTER TABLE project_shares ADD permission ENUM('view','edit','manage') NOT NULL DEFAULT 'view'");
+    }
+    $pdo->exec("CREATE TABLE IF NOT EXISTS project_activity (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        project_id INT UNSIGNED NOT NULL,
+        user_id INT UNSIGNED NULL,
+        action VARCHAR(100) NOT NULL,
+        details TEXT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_project_activity_project (project_id),
+        INDEX idx_project_activity_user (user_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 }

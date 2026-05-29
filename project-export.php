@@ -24,7 +24,7 @@ $stmt = $pdo->prepare('SELECT id, circuit_id, device_id, name, brand, category, 
 $stmt->execute([$projectId]);
 $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$stmt = $pdo->prepare('SELECT u.email, u.name FROM project_shares ps JOIN users u ON u.id = ps.user_id WHERE ps.project_id = ? ORDER BY u.email ASC');
+$stmt = $pdo->prepare('SELECT u.email, u.name, ps.permission FROM project_shares ps JOIN users u ON u.id = ps.user_id WHERE ps.project_id = ? ORDER BY u.email ASC');
 $stmt->execute([$projectId]);
 $shares = $stmt->fetchAll(PDO::FETCH_ASSOC);
 

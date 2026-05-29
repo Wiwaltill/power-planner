@@ -5,16 +5,20 @@ $projectId = (int)($_GET['id'] ?? 0);
 $project = user_project($projectId, (int)$user['id']);
 if (!$project) { header('Location: projects'); exit; }
 $isOwner = (int)($project['is_owner'] ?? 0) === 1;
+$canEdit = project_can_edit($project);
+$canManage = project_can_manage($project);
 $shareMessage = '';
 $shareError = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isOwner) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canManage) {
     $action = $_POST['action'] ?? '';
     if ($action === 'share_project') {
         $shareUserId = (int)($_POST['share_user_id'] ?? 0);
         if ($shareUserId > 0 && $shareUserId !== (int)$user['id']) {
             try {
-                $stmt = db()->prepare('INSERT IGNORE INTO project_shares (project_id, user_id) VALUES (?, ?)');
-                $stmt->execute([$projectId, $shareUserId]);
+                $permission = in_array(($_POST['permission'] ?? 'view'), ['view','edit','manage'], true) ? $_POST['permission'] : 'view';
+                $stmt = db()->prepare('INSERT INTO project_shares (project_id, user_id, permission) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE permission = VALUES(permission)');
+                $stmt->execute([$projectId, $shareUserId, $permission]);
+                log_project_activity($projectId, (int)$user['id'], 'Projekt geteilt', 'Nutzer-ID ' . $shareUserId . ' / ' . $permission);
                 $shareMessage = 'Projekt wurde geteilt.';
             } catch (Throwable $e) {
                 $shareError = 'Projekt konnte nicht geteilt werden.';
@@ -26,55 +30,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isOwner) {
     if ($action === 'unshare_project') {
         $shareId = (int)($_POST['share_id'] ?? 0);
         db()->prepare('DELETE FROM project_shares WHERE id = ? AND project_id = ?')->execute([$shareId, $projectId]);
+        log_project_activity($projectId, (int)$user['id'], 'Freigabe entfernt', 'Share-ID ' . $shareId);
         $shareMessage = 'Freigabe wurde entfernt.';
+    }
+    if ($action === 'update_share_permission') {
+        $shareId = (int)($_POST['share_id'] ?? 0);
+        $permission = in_array(($_POST['permission'] ?? 'view'), ['view','edit','manage'], true) ? $_POST['permission'] : 'view';
+        db()->prepare('UPDATE project_shares SET permission = ? WHERE id = ? AND project_id = ?')->execute([$permission, $shareId, $projectId]);
+        log_project_activity($projectId, (int)$user['id'], 'Freigaberecht geändert', 'Share-ID ' . $shareId . ' / ' . $permission);
+        $shareMessage = 'Freigaberecht wurde geändert.';
     }
     if ($action === 'enable_public_share') {
         $token = $project['public_share_token'] ?? '';
         if (!$token) { $token = generate_share_token(); }
         db()->prepare('UPDATE projects SET public_share_token = ?, public_share_enabled = 1 WHERE id = ?')->execute([$token, $projectId]);
         $project = user_project($projectId, (int)$user['id']);
+        log_project_activity($projectId, (int)$user['id'], 'Web-Freigabe aktiviert');
         $shareMessage = 'Web-Freigabe wurde aktiviert.';
     }
     if ($action === 'disable_public_share') {
         db()->prepare('UPDATE projects SET public_share_enabled = 0 WHERE id = ?')->execute([$projectId]);
         $project = user_project($projectId, (int)$user['id']);
+        log_project_activity($projectId, (int)$user['id'], 'Web-Freigabe deaktiviert');
         $shareMessage = 'Web-Freigabe wurde deaktiviert.';
     }
     if ($action === 'regenerate_public_share') {
         $token = generate_share_token();
         db()->prepare('UPDATE projects SET public_share_token = ?, public_share_enabled = 1 WHERE id = ?')->execute([$token, $projectId]);
         $project = user_project($projectId, (int)$user['id']);
+        log_project_activity($projectId, (int)$user['id'], 'Web-Link neu erstellt');
         $shareMessage = 'Web-Link wurde neu erstellt.';
     }
 }
 $shareUsers = [];
 $availableShareUsers = [];
 if ($isOwner) {
-    $stmt = db()->prepare('SELECT ps.id AS share_id, u.id, u.name, u.email FROM project_shares ps JOIN users u ON u.id = ps.user_id WHERE ps.project_id = ? ORDER BY u.name, u.email');
+    $stmt = db()->prepare('SELECT ps.id AS share_id, ps.permission, u.id, u.name, u.email FROM project_shares ps JOIN users u ON u.id = ps.user_id WHERE ps.project_id = ? ORDER BY u.name, u.email');
     $stmt->execute([$projectId]);
     $shareUsers = $stmt->fetchAll();
     $stmt = db()->prepare('SELECT u.id, u.name, u.email FROM users u WHERE u.id <> ? AND u.active = 1 AND NOT EXISTS (SELECT 1 FROM project_shares ps WHERE ps.project_id = ? AND ps.user_id = u.id) ORDER BY u.name, u.email');
     $stmt->execute([(int)$user['id'], $projectId]);
     $availableShareUsers = $stmt->fetchAll();
 }
+$activityStmt = db()->prepare('SELECT a.*, u.name AS user_name FROM project_activity a LEFT JOIN users u ON u.id = a.user_id WHERE a.project_id = ? ORDER BY a.created_at DESC LIMIT 25');
+$activityStmt->execute([$projectId]);
+$activities = $activityStmt->fetchAll();
 $companyLogo = setting_get('company_logo');
 $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageScript = 'assets/js/app.js'; require __DIR__ . '/inc/header.php';
 ?>
-<script>window.APP_PROJECT_ID = <?= (int)$project['id'] ?>;</script>
+<script>window.APP_PROJECT_ID = <?= (int)$project['id'] ?>; window.APP_CAN_EDIT = <?= $canEdit ? 'true' : 'false' ?>;</script>
 <main class="container py-4 flex-grow-1">
   <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-4">
     <div><h1 class="h3 mb-1"><?= e($project['name']) ?></h1><div class="small-muted"><?= e($project['client'] ?: 'Kein Kunde') ?> · <?= e($project['technician'] ?: 'Kein Techniker') ?></div></div>
     <a href="<?= e(app_url('projects')) ?>" class="btn btn-outline-secondary">Zur Projektliste</a>
   </div>
-  <?php if (!$isOwner): ?><div class="alert alert-info">Dieses Projekt wurde von <?= e($project['owner_name'] ?? '') ?> mit dir geteilt.</div><?php endif; ?>
+  <?php if (!$isOwner): ?><div class="alert alert-info">Dieses Projekt wurde von <?= e($project['owner_name'] ?? '') ?> mit dir geteilt. Berechtigung: <?= e(($project['permission'] ?? 'view') === 'edit' ? 'bearbeiten' : (($project['permission'] ?? 'view') === 'manage' ? 'verwalten' : 'ansehen')) ?>.</div><?php endif; ?>
+  <?php if (!$canEdit): ?><div class="alert alert-warning">Du hast nur Leserechte. Änderungen sind gesperrt.</div><?php endif; ?>
   <?php if ($shareMessage): ?><div class="alert alert-success"><?= e($shareMessage) ?></div><?php endif; ?>
   <?php if ($shareError): ?><div class="alert alert-danger"><?= e($shareError) ?></div><?php endif; ?>
   <?php if (isset($_GET['imported'])): ?><div class="alert alert-success">Projekt wurde erfolgreich importiert.</div><?php endif; ?>
   <div class="card p-3 p-md-4 mb-4">
     <div class="row g-3 align-items-end">
       <div class="col-md-4"><label class="form-label">Aktiver Stromkreis</label><select class="form-select" id="activeCircuitSelect"></select></div>
-      <div class="col-md-5"><label class="form-label">Neuen Stromkreis anlegen</label><div class="input-group"><input class="form-control" id="newCircuitName" placeholder="z. B. Fronttruss"><button class="btn btn-outline-primary" id="addCircuit" type="button">Anlegen</button></div></div>
-      <div class="col-md-3"><button class="btn btn-outline-danger w-100" id="deleteCircuit" type="button">Stromkreis löschen</button></div>
+      <div class="col-md-5"><label class="form-label">Neuen Stromkreis anlegen</label><div class="input-group"><input class="form-control" id="newCircuitName" placeholder="z. B. Fronttruss"><button class="btn btn-outline-primary" id="addCircuit" type="button" <?= !$canEdit ? 'disabled' : '' ?>>Anlegen</button></div></div>
+      <div class="col-md-3"><button class="btn btn-outline-danger w-100" id="deleteCircuit" type="button" <?= !$canEdit ? 'disabled' : '' ?>>Stromkreis löschen</button></div>
     </div>
   </div>
   <div class="row g-4">
@@ -88,7 +107,7 @@ $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageSc
         <div class="col-md-4"><label class="form-label">Spannung</label><input type="number" class="form-control" id="voltage" value="230" min="1"></div>
         <div class="col-12"><label class="form-label">Stromkreis</label><select class="form-select" id="circuitSelect"></select></div>
         <div class="col-12"><label class="form-label">Bemerkungen</label><textarea class="form-control" id="remarks" rows="2"></textarea></div>
-        <div class="col-12"><button class="btn btn-primary w-100">Zum Plan hinzufügen</button></div>
+        <div class="col-12"><button class="btn btn-primary w-100" <?= !$canEdit ? 'disabled' : '' ?>>Zum Plan hinzufügen</button></div>
       </form>
       <hr><div class="d-flex gap-2 flex-wrap">
         <button class="btn btn-outline-primary btn-sm flex-fill" id="exportPdf" type="button">PDF exportieren</button>
@@ -98,8 +117,8 @@ $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageSc
           <button class="btn btn-outline-info btn-sm flex-fill copy-public-link" type="button" data-link="<?= e(app_full_url('public-project?token=' . urlencode($project['public_share_token']))) ?>"><i class="bi bi-clipboard me-1"></i>Web-Link kopieren</button>
         <?php endif; ?>
         <button class="btn btn-outline-secondary btn-sm flex-fill" id="exportCsv" type="button">CSV exportieren</button>
-        <button class="btn btn-outline-warning btn-sm flex-fill" id="autoDistribute" type="button">Automatisch verteilen</button>
-        <button class="btn btn-outline-danger btn-sm flex-fill" id="clearPlan" type="button">Plan leeren</button>
+        <button class="btn btn-outline-warning btn-sm flex-fill" id="autoDistribute" type="button" <?= !$canEdit ? 'disabled' : '' ?>>Automatisch verteilen</button>
+        <button class="btn btn-outline-danger btn-sm flex-fill" id="clearPlan" type="button" <?= !$canEdit ? 'disabled' : '' ?>>Plan leeren</button>
       </div>
     </div></div>
     <div class="col-lg-8"><div class="d-flex justify-content-between align-items-end mb-3"><div><h2 class="h4 mb-0">Phasenplaner</h2><div class="small-muted">Geräte im aktiven Stromkreis per Drag & Drop zwischen L1 bis L3 verschieben.</div></div></div><div class="row g-3" id="phaseBoards"></div></div>
@@ -127,7 +146,7 @@ $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageSc
     <h2 class="h4 mb-3"><i class="bi bi-share me-2"></i>Projekt teilen</h2>
     <form method="post" class="row g-3 align-items-end mb-3">
       <input type="hidden" name="action" value="share_project">
-      <div class="col-md-8">
+      <div class="col-md-6">
         <label class="form-label">Nutzer auswählen</label>
         <select class="form-select" name="share_user_id" required>
           <option value="">Bitte wählen...</option>
@@ -136,7 +155,8 @@ $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageSc
           <?php endforeach; ?>
         </select>
       </div>
-      <div class="col-md-4"><button class="btn btn-primary w-100" <?= empty($availableShareUsers) ? 'disabled' : '' ?>>Teilen</button></div>
+      <div class="col-md-3"><label class="form-label">Recht</label><select class="form-select" name="permission"><option value="view">Nur ansehen</option><option value="edit">Bearbeiten</option><option value="manage">Verwalten</option></select></div>
+      <div class="col-md-3"><button class="btn btn-primary w-100" <?= empty($availableShareUsers) ? 'disabled' : '' ?>>Teilen</button></div>
     </form>
     <?php if (!$shareUsers): ?>
       <p class="text-muted mb-0">Dieses Projekt ist aktuell mit keinem Nutzer geteilt.</p>
@@ -145,17 +165,45 @@ $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageSc
         <?php foreach ($shareUsers as $shareUser): ?>
           <div class="list-group-item d-flex flex-column flex-md-row justify-content-between gap-2 align-items-md-center">
             <div><strong><?= e($shareUser['name']) ?></strong><div class="small text-muted"><?= e($shareUser['email']) ?></div></div>
-            <form method="post" data-confirm="Freigabe für diesen Nutzer entfernen?" data-confirm-title="Freigabe entfernen" data-confirm-button="Entfernen">
-              <input type="hidden" name="action" value="unshare_project">
-              <input type="hidden" name="share_id" value="<?= (int)$shareUser['share_id'] ?>">
-              <button class="btn btn-sm btn-outline-danger">Freigabe entfernen</button>
-            </form>
+            <div class="d-flex gap-2 align-items-center flex-wrap">
+              <form method="post" class="d-flex gap-2 align-items-center">
+                <input type="hidden" name="action" value="update_share_permission">
+                <input type="hidden" name="share_id" value="<?= (int)$shareUser['share_id'] ?>">
+                <select class="form-select form-select-sm" name="permission" onchange="this.form.submit()">
+                  <option value="view" <?= ($shareUser['permission'] ?? 'view') === 'view' ? 'selected' : '' ?>>Nur ansehen</option>
+                  <option value="edit" <?= ($shareUser['permission'] ?? 'view') === 'edit' ? 'selected' : '' ?>>Bearbeiten</option>
+                  <option value="manage" <?= ($shareUser['permission'] ?? 'view') === 'manage' ? 'selected' : '' ?>>Verwalten</option>
+                </select>
+              </form>
+              <form method="post" data-confirm="Freigabe für diesen Nutzer entfernen?" data-confirm-title="Freigabe entfernen" data-confirm-button="Entfernen">
+                <input type="hidden" name="action" value="unshare_project">
+                <input type="hidden" name="share_id" value="<?= (int)$shareUser['share_id'] ?>">
+                <button class="btn btn-sm btn-outline-danger">Freigabe entfernen</button>
+              </form>
+            </div>
           </div>
         <?php endforeach; ?>
       </div>
     <?php endif; ?>
   </div>
   <?php endif; ?>
+
+  <div class="card p-4 mt-4">
+    <h2 class="h4 mb-3"><i class="bi bi-clock-history me-2"></i>Änderungsverlauf</h2>
+    <?php if (!$activities): ?>
+      <p class="text-muted mb-0">Noch keine Änderungen protokolliert.</p>
+    <?php else: ?>
+      <div class="list-group list-group-flush">
+        <?php foreach ($activities as $entry): ?>
+          <div class="list-group-item px-0 d-flex flex-column flex-md-row justify-content-between gap-2">
+            <div><strong><?= e($entry['action']) ?></strong><?php if (!empty($entry['details'])): ?><div class="small text-muted"><?= e($entry['details']) ?></div><?php endif; ?></div>
+            <div class="small text-muted text-md-end"><?= e($entry['user_name'] ?: 'System') ?><br><?= e($entry['created_at']) ?></div>
+          </div>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+  </div>
+
   <section id="printArea" class="print-area"><div class="print-header"><div class="print-title-wrap"><?php if ($companyLogo): ?><img class="print-logo" src="<?= e(app_url($companyLogo)) ?>" alt="Firmenlogo"><?php endif; ?><div><h1>Stromplan Übersicht</h1><p><?= e($project['name']) ?> · <?= e($project['client']) ?></p></div></div><div class="print-meta"><?= date('d.m.Y') ?></div></div><div id="printSummary"></div><div id="printPhaseTables"></div><table class="print-table"><thead><tr><th>Gerät</th><th>Marke</th><th>Anzahl</th><th>Stromkreis</th><th>Phase</th><th>Leistung</th><th>Strom</th><th>Bemerkung</th></tr></thead><tbody id="printRows"></tbody></table></section>
 </main>
 <script>

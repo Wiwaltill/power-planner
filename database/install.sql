@@ -32,6 +32,8 @@ CREATE TABLE IF NOT EXISTS projects (
   technician VARCHAR(190) DEFAULT '',
   public_share_token VARCHAR(96) NULL,
   public_share_enabled TINYINT(1) NOT NULL DEFAULT 0,
+  deleted_at DATETIME NULL,
+  deleted_by INT UNSIGNED NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_projects_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -44,6 +46,7 @@ CREATE TABLE IF NOT EXISTS project_shares (
   project_id INT UNSIGNED NOT NULL,
   user_id INT UNSIGNED NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  permission ENUM('view','edit','manage') NOT NULL DEFAULT 'view',
   UNIQUE KEY uniq_project_share (project_id, user_id),
   CONSTRAINT fk_project_share_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
   CONSTRAINT fk_project_share_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -119,4 +122,22 @@ CREATE TABLE IF NOT EXISTS app_settings (
   setting_key VARCHAR(100) NOT NULL PRIMARY KEY,
   setting_value TEXT NULL,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  version VARCHAR(50) NOT NULL PRIMARY KEY,
+  applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+INSERT IGNORE INTO schema_migrations (version) VALUES ('1.4.0');
+
+CREATE TABLE IF NOT EXISTS project_activity (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  project_id INT UNSIGNED NOT NULL,
+  user_id INT UNSIGNED NULL,
+  action VARCHAR(100) NOT NULL,
+  details TEXT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_project_activity_project (project_id),
+  INDEX idx_project_activity_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
