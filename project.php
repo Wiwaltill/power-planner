@@ -28,6 +28,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isOwner) {
         db()->prepare('DELETE FROM project_shares WHERE id = ? AND project_id = ?')->execute([$shareId, $projectId]);
         $shareMessage = 'Freigabe wurde entfernt.';
     }
+    if ($action === 'enable_public_share') {
+        $token = $project['public_share_token'] ?? '';
+        if (!$token) { $token = generate_share_token(); }
+        db()->prepare('UPDATE projects SET public_share_token = ?, public_share_enabled = 1 WHERE id = ?')->execute([$token, $projectId]);
+        $project = user_project($projectId, (int)$user['id']);
+        $shareMessage = 'Web-Freigabe wurde aktiviert.';
+    }
+    if ($action === 'disable_public_share') {
+        db()->prepare('UPDATE projects SET public_share_enabled = 0 WHERE id = ?')->execute([$projectId]);
+        $project = user_project($projectId, (int)$user['id']);
+        $shareMessage = 'Web-Freigabe wurde deaktiviert.';
+    }
+    if ($action === 'regenerate_public_share') {
+        $token = generate_share_token();
+        db()->prepare('UPDATE projects SET public_share_token = ?, public_share_enabled = 1 WHERE id = ?')->execute([$token, $projectId]);
+        $project = user_project($projectId, (int)$user['id']);
+        $shareMessage = 'Web-Link wurde neu erstellt.';
+    }
 }
 $shareUsers = [];
 $availableShareUsers = [];
@@ -74,6 +92,7 @@ $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageSc
       <hr><div class="d-flex gap-2 flex-wrap">
         <button class="btn btn-outline-primary btn-sm flex-fill" id="exportPdf" type="button">PDF exportieren</button>
         <a class="btn btn-outline-success btn-sm flex-fill" id="exportExcel" href="<?= e(app_url('export-excel?id=' . (int)$project['id'])) ?>">Excel exportieren</a>
+        <?php if ($isOwner && !empty($project['public_share_enabled']) && !empty($project['public_share_token'])): ?><a class="btn btn-outline-info btn-sm flex-fill" target="_blank" href="<?= e(app_url('public-project?token=' . urlencode($project['public_share_token']))) ?>">Web-Link öffnen</a><?php endif; ?>
         <button class="btn btn-outline-secondary btn-sm flex-fill" id="exportCsv" type="button">CSV exportieren</button>
         <button class="btn btn-outline-warning btn-sm flex-fill" id="autoDistribute" type="button">Automatisch verteilen</button>
         <button class="btn btn-outline-danger btn-sm flex-fill" id="clearPlan" type="button">Plan leeren</button>
@@ -83,6 +102,23 @@ $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageSc
   </div>
   <div class="card p-4 mt-4"><h2 class="h4 mb-3">Aktueller Stromplan</h2><div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>Gerät</th><th>Marke</th><th>Anzahl</th><th>Stromkreis</th><th>Phase</th><th>Leistung</th><th>Strom</th><th>Bemerkungen</th><th></th></tr></thead><tbody id="planRows"></tbody></table></div></div>
   <?php if ($isOwner): ?>
+  <div class="card p-4 mt-4">
+    <h2 class="h4 mb-3"><i class="bi bi-globe2 me-2"></i>Web-URL teilen</h2>
+    <p class="text-muted">Erstellt einen öffentlichen Nur-Lese-Link. Der Link funktioniert ohne Anmeldung.</p>
+    <?php if (!empty($project['public_share_enabled']) && !empty($project['public_share_token'])): ?>
+      <label class="form-label">Öffentlicher Link</label>
+      <div class="input-group mb-3">
+        <input class="form-control" readonly value="<?= e(app_url('public-project?token=' . urlencode($project['public_share_token']))) ?>" onclick="this.select()">
+        <a class="btn btn-outline-primary" target="_blank" href="<?= e(app_url('public-project?token=' . urlencode($project['public_share_token']))) ?>">Öffnen</a>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <form method="post"><input type="hidden" name="action" value="disable_public_share"><button class="btn btn-outline-danger">Web-Link deaktivieren</button></form>
+        <form method="post" data-confirm="Der bisherige Web-Link wird ungültig. Neuen Link erstellen?" data-confirm-title="Web-Link erneuern" data-confirm-button="Neu erstellen"><input type="hidden" name="action" value="regenerate_public_share"><button class="btn btn-outline-secondary">Link neu erstellen</button></form>
+      </div>
+    <?php else: ?>
+      <form method="post"><input type="hidden" name="action" value="enable_public_share"><button class="btn btn-info">Web-Link aktivieren</button></form>
+    <?php endif; ?>
+  </div>
   <div class="card p-4 mt-4">
     <h2 class="h4 mb-3"><i class="bi bi-share me-2"></i>Projekt teilen</h2>
     <form method="post" class="row g-3 align-items-end mb-3">

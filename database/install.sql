@@ -30,10 +30,13 @@ CREATE TABLE IF NOT EXISTS projects (
   name VARCHAR(190) NOT NULL,
   client VARCHAR(190) DEFAULT '',
   technician VARCHAR(190) DEFAULT '',
+  public_share_token VARCHAR(96) NULL,
+  public_share_enabled TINYINT(1) NOT NULL DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_projects_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  INDEX idx_projects_user (user_id)
+  INDEX idx_projects_user (user_id),
+  UNIQUE KEY idx_projects_public_share_token (public_share_token)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS project_shares (

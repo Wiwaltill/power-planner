@@ -1,6 +1,6 @@
 <?php
 if (!defined('APP_GITHUB_URL')) { define('APP_GITHUB_URL', 'https://github.com/Wiwaltill/power-planner/'); }
-if (!defined('APP_VERSION')) { define('APP_VERSION', '1.2.8'); }
+if (!defined('APP_VERSION')) { define('APP_VERSION', '1.2.9'); }
 function e($value): string { return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8'); }
 function json_response($data, int $status = 200): void {
     http_response_code($status);
@@ -66,4 +66,15 @@ function upload_company_logo(array $file): string {
         throw new RuntimeException('Logo konnte nicht gespeichert werden.');
     }
     return 'uploads/' . $filename;
+}
+
+function generate_share_token(): string {
+    return bin2hex(random_bytes(24));
+}
+function public_project_by_token(string $token): ?array {
+    if ($token === '') return null;
+    ensure_schema();
+    $stmt = db()->prepare('SELECT p.*, u.name AS owner_name, u.email AS owner_email FROM projects p JOIN users u ON u.id = p.user_id WHERE p.public_share_enabled = 1 AND p.public_share_token = ? LIMIT 1');
+    $stmt->execute([$token]);
+    return $stmt->fetch() ?: null;
 }

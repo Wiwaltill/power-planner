@@ -75,4 +75,13 @@ function ensure_schema(): void {
     if (table_exists($pdo, 'circuits') && !column_exists($pdo, 'circuits', 'amp_limit')) {
         $pdo->exec("ALTER TABLE circuits ADD amp_limit DECIMAL(8,2) NOT NULL DEFAULT 16.00");
     }
+    if (table_exists($pdo, 'projects')) {
+        if (!column_exists($pdo, 'projects', 'public_share_token')) {
+            $pdo->exec("ALTER TABLE projects ADD public_share_token VARCHAR(96) NULL");
+        }
+        if (!column_exists($pdo, 'projects', 'public_share_enabled')) {
+            $pdo->exec("ALTER TABLE projects ADD public_share_enabled TINYINT(1) NOT NULL DEFAULT 0");
+        }
+        try { $pdo->exec("CREATE UNIQUE INDEX idx_projects_public_share_token ON projects (public_share_token)"); } catch (Throwable $e) {}
+    }
 }
