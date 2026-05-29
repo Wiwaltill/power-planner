@@ -13,7 +13,7 @@ $shareMessage = '';
 $shareError = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
-    $manageActions = ['share_project','unshare_project','update_share_permission','enable_public_share','disable_public_share','regenerate_public_share','update_public_share'];
+    $manageActions = ['share_project','unshare_project','update_share_permission','enable_public_share','disable_public_share','regenerate_public_share','update_public_share','clear_public_share_expiry'];
     $ownerActions = ['transfer_owner'];
     if (in_array($action, $manageActions, true) && !$canManage) { $shareError = 'Keine Verwaltungsrechte für dieses Projekt.'; $action = ''; }
     if (in_array($action, $ownerActions, true) && !$canOwner) { $shareError = 'Nur der Besitzer darf diese Aktion ausführen.'; $action = ''; }
@@ -102,6 +102,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $project = user_project($projectId, (int)$user['id']);
         $shareMessage = 'Web-Freigabe wurde aktualisiert.';
     }
+    if ($action === 'clear_public_share_expiry') {
+        db()->prepare('UPDATE projects SET public_share_expires_at = NULL WHERE id = ?')->execute([$projectId]);
+        $project = user_project($projectId, (int)$user['id']);
+        $shareMessage = 'Ablaufdatum wurde entfernt.';
+    }
 }
 $shareUsers = [];
 $availableShareUsers = [];
@@ -175,13 +180,22 @@ $pageTitle = $project['name'] . ' · Planung'; $activePage = 'projects'; $pageSc
       </div>
       <form method="post" class="row g-3 mb-3">
         <input type="hidden" name="action" value="update_public_share">
-        <div class="col-md-4"><label class="form-label">Optional gültig bis</label><input class="form-control" type="datetime-local" name="public_share_expires_at" value="<?= !empty($project['public_share_expires_at']) ? e(str_replace(' ', 'T', substr($project['public_share_expires_at'],0,16))) : '' ?>"></div>
+        <div class="col-md-4">
+          <label class="form-label">Optional gültig bis</label>
+          <input class="form-control" type="datetime-local" name="public_share_expires_at" value="<?= !empty($project['public_share_expires_at']) ? e(str_replace(' ', 'T', substr($project['public_share_expires_at'],0,16))) : '' ?>">
+        </div>
         <div class="col-md-4"><label class="form-label">Optionales Passwort</label><input class="form-control" type="password" name="public_share_password" placeholder="leer lassen = unverändert"></div>
         <div class="col-md-2 d-flex align-items-end"><div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="clear_public_share_password" id="clearSharePassword"><label class="form-check-label small" for="clearSharePassword">Passwort entfernen</label></div></div>
         <div class="col-md-2 d-flex align-items-end"><button class="btn btn-outline-primary w-100">Speichern</button></div>
-        <div class="col-12 small text-muted">Status: <?= !empty($project['public_share_password_hash']) ? 'Passwortschutz aktiv' : 'Kein Passwortschutz' ?><?= !empty($project['public_share_expires_at']) ? ' · gültig bis ' . e($project['public_share_expires_at']) : '' ?></div>
+        <div class="col-12 small text-muted">Status: <?= !empty($project['public_share_password_hash']) ? 'Passwortschutz aktiv' : 'Kein Passwortschutz' ?><?= !empty($project['public_share_expires_at']) ? ' · gültig bis ' . e($project['public_share_expires_at']) : ' · kein Ablaufdatum' ?></div>
       </form>
       <div class="d-flex gap-2 flex-wrap">
+        <?php if (!empty($project['public_share_expires_at'])): ?>
+        <form method="post" data-confirm="Das Ablaufdatum wird entfernt. Der Web-Link bleibt aktiv, bis er manuell deaktiviert wird." data-confirm-title="Ablaufdatum entfernen" data-confirm-button="Entfernen">
+          <input type="hidden" name="action" value="clear_public_share_expiry">
+          <button class="btn btn-outline-warning">Ablaufdatum entfernen</button>
+        </form>
+        <?php endif; ?>
         <form method="post"><input type="hidden" name="action" value="disable_public_share"><button class="btn btn-outline-danger">Web-Link deaktivieren</button></form>
         <form method="post" data-confirm="Der bisherige Web-Link wird ungültig. Neuen Link erstellen?" data-confirm-title="Web-Link erneuern" data-confirm-button="Neu erstellen"><input type="hidden" name="action" value="regenerate_public_share"><button class="btn btn-outline-secondary">Link neu erstellen</button></form>
       </div>
