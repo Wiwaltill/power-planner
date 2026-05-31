@@ -7,6 +7,11 @@ if (file_exists($configPath) && file_exists($lockPath)) {
 }
 $error = '';
 $success = false;
+$isDocker = getenv('POWERPLANNER_DOCKER') === '1';
+$defaultDbHost = $isDocker ? 'db' : 'localhost';
+$defaultDbName = $isDocker ? (getenv('DB_NAME') ?: 'powerplanner') : '';
+$defaultDbUser = $isDocker ? (getenv('DB_USER') ?: 'powerplanner') : '';
+
 function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 function install_upload_logo(PDO $pdo): void {
     if (empty($_FILES['firm_logo']['name'])) return;
@@ -32,10 +37,10 @@ function install_upload_logo(PDO $pdo): void {
     $stmt->execute(['company_logo', 'uploads/' . $filename]);
 }
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $dbHost = trim($_POST['db_host'] ?? 'localhost');
-    $dbName = trim($_POST['db_name'] ?? '');
-    $dbUser = trim($_POST['db_user'] ?? '');
-    $dbPass = (string)($_POST['db_pass'] ?? '');
+    $dbHost = trim($_POST['db_host'] ?? $defaultDbHost);
+    $dbName = trim($_POST['db_name'] ?? $defaultDbName);
+    $dbUser = trim($_POST['db_user'] ?? $defaultDbUser);
+    $dbPass = (string)($_POST['db_pass'] ?? ($isDocker ? (getenv('DB_PASS') ?: 'powerplanner') : ''));
     $appName = trim($_POST['app_name'] ?? 'Stromplaner');
     $adminName = trim($_POST['admin_name'] ?? '');
     $adminEmail = trim($_POST['admin_email'] ?? '');
@@ -88,12 +93,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <a class="btn btn-primary" href="login">Zum Login</a>
         <?php else: ?>
           <?php if ($error): ?><div class="alert alert-danger"><?= h($error) ?></div><?php endif; ?>
+          <?php if ($isDocker): ?>
+            <div class="alert alert-info">Docker-Modus erkannt. Die Datenbankwerte sind für den mitgelieferten MariaDB-Container vorausgefüllt.</div>
+          <?php endif; ?>
           <form enctype="multipart/form-data" method="post" class="row g-3">
             <h2 class="h5">Datenbank</h2>
-            <div class="col-md-6"><label class="form-label">Host</label><input class="form-control" name="db_host" value="<?= h($_POST['db_host'] ?? 'localhost') ?>" required></div>
-            <div class="col-md-6"><label class="form-label">Datenbankname</label><input class="form-control" name="db_name" value="<?= h($_POST['db_name'] ?? '') ?>" required></div>
-            <div class="col-md-6"><label class="form-label">Datenbank-User</label><input class="form-control" name="db_user" value="<?= h($_POST['db_user'] ?? '') ?>" required></div>
-            <div class="col-md-6"><label class="form-label">Datenbank-Passwort</label><input class="form-control" type="password" name="db_pass"></div>
+            <div class="col-md-6"><label class="form-label">Host</label><input class="form-control" name="db_host" value="<?= h($_POST['db_host'] ?? $defaultDbHost) ?>" required></div>
+            <div class="col-md-6"><label class="form-label">Datenbankname</label><input class="form-control" name="db_name" value="<?= h($_POST['db_name'] ?? $defaultDbName) ?>" required></div>
+            <div class="col-md-6"><label class="form-label">Datenbank-User</label><input class="form-control" name="db_user" value="<?= h($_POST['db_user'] ?? $defaultDbUser) ?>" required></div>
+            <div class="col-md-6"><label class="form-label">Datenbank-Passwort</label><input class="form-control" type="password" name="db_pass" value="<?= h($_POST['db_pass'] ?? ($isDocker ? (getenv('DB_PASS') ?: 'powerplanner') : '')) ?>"></div>
             <hr>
             <h2 class="h5">System</h2>
             <div class="col-12"><label class="form-label">App-Name</label><input class="form-control" name="app_name" value="<?= h($_POST['app_name'] ?? 'Stromplaner') ?>"></div>

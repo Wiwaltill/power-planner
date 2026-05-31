@@ -1,0 +1,11 @@
+.git
+.github
+.gitignore
+.env
+node_modules
+vendor
+storage/backups/*
+storage/exports/*
+uploads/*
+config/config.php
+*.zip

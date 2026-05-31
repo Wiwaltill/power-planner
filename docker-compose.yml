@@ -1,0 +1,54 @@
+services:
+  app:
+    build: .
+    container_name: powerplanner-app
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      POWERPLANNER_DOCKER: "1"
+      DB_NAME: ${DB_NAME:-powerplanner}
+      DB_USER: ${DB_USER:-powerplanner}
+      DB_PASS: ${DB_PASS:-powerplanner}
+    volumes:
+      - ./config:/var/www/html/config
+      - ./storage:/var/www/html/storage
+      - ./uploads:/var/www/html/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mariadb:10.11
+    container_name: powerplanner-db
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${DB_NAME:-powerplanner}
+      MARIADB_USER: ${DB_USER:-powerplanner}
+      MARIADB_PASSWORD: ${DB_PASS:-powerplanner}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASS:-change-this-root-password}
+    volumes:
+      - powerplanner_db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  phpmyadmin:
+    image: phpmyadmin:5
+    container_name: powerplanner-phpmyadmin
+    restart: unless-stopped
+    profiles: ["tools"]
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: db
+      PMA_USER: ${DB_USER:-powerplanner}
+      PMA_PASSWORD: ${DB_PASS:-powerplanner}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  powerplanner_db:
