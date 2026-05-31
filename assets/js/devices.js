@@ -2,7 +2,6 @@ const apiBase = (window.APP_BASE_PATH || '') + '/api';
 const apiUrl = apiBase + '/devices';
 const settingsUrl = apiBase + '/settings';
 let devices = [];
-let trashedDevices = [];
 let deviceSettings = {brands: [], categories: [], connectors: []};
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 const byId = id => document.getElementById(id);
@@ -33,9 +32,7 @@ function renderSelect(id, rows, placeholder) {
 
 async function loadDevices(){
   devices = await fetchJson(apiUrl);
-  trashedDevices = await fetchJson(apiUrl + '?trash=1');
   renderDevices();
-  renderTrashDevices();
 }
 
 function renderDevices(){
@@ -83,15 +80,6 @@ async function deleteDevice(id){
   catch(err) { AppUI.error(err.message); }
 }
 window.deleteDevice = deleteDevice;
-
-function renderTrashDevices(){
-  const rows = byId('deviceTrashRows');
-  if(!rows) return;
-  rows.innerHTML = trashedDevices.length ? trashedDevices.map(d => `<tr><td><strong>${esc(d.name)}</strong><div class="small-muted">${esc(d.brand||'-')} · ${esc(d.category||'-')}</div></td><td>${Number(d.power_w||0).toLocaleString('de-DE')} W</td><td class="text-end"><button class="btn btn-sm btn-outline-success me-1" onclick="restoreDevice(${Number(d.id)})">Wiederherstellen</button><button class="btn btn-sm btn-outline-danger" onclick="purgeDevice(${Number(d.id)})">Endgültig löschen</button></td></tr>`).join('') : '<tr><td colspan="3" class="text-center text-muted py-3">Keine Geräte im Papierkorb.</td></tr>';
-}
-async function restoreDevice(id){ try { await fetchJson(`${apiUrl}?restore=1`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})}); await loadDevices(); } catch(err){ AppUI.error(err.message); } }
-async function purgeDevice(id){ if(!(await AppUI.confirm('Gerät endgültig löschen?', {title:'Endgültig löschen', confirmText:'Löschen'}))) return; try { await fetchJson(`${apiUrl}?id=${id}&purge=1`,{method:'DELETE'}); await loadDevices(); } catch(err){ AppUI.error(err.message); } }
-window.restoreDevice=restoreDevice; window.purgeDevice=purgeDevice;
 
 byId('deviceForm').addEventListener('submit', async e => {
   e.preventDefault();

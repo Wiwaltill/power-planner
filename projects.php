@@ -110,15 +110,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $stmt = db()->prepare('SELECT p.*, u.name AS owner_name, u.email AS owner_email, CASE WHEN p.user_id = ? THEN 1 ELSE 0 END AS is_owner, COALESCE(ps.permission, CASE WHEN p.user_id = ? THEN \'manage\' ELSE ps.permission END) AS permission, COUNT(DISTINCT c.id) circuits, COUNT(DISTINCT i.id) items FROM projects p JOIN users u ON u.id = p.user_id LEFT JOIN project_shares ps ON ps.project_id = p.id AND ps.user_id = ? LEFT JOIN circuits c ON c.project_id = p.id LEFT JOIN plan_items i ON i.project_id = p.id WHERE p.deleted_at IS NULL AND p.archived_at IS NULL AND (p.user_id = ? OR ps.user_id = ?) GROUP BY p.id ORDER BY p.updated_at DESC');
 $stmt->execute([(int)$user['id'], (int)$user['id'], (int)$user['id'], (int)$user['id'], (int)$user['id']]);
 $projects = $stmt->fetchAll();
-$trashStmt = db()->prepare('SELECT p.*, COUNT(DISTINCT c.id) circuits, COUNT(DISTINCT i.id) items FROM projects p LEFT JOIN circuits c ON c.project_id = p.id LEFT JOIN plan_items i ON i.project_id = p.id WHERE p.deleted_at IS NOT NULL AND p.user_id = ? GROUP BY p.id ORDER BY p.deleted_at DESC');
-$trashStmt->execute([(int)$user['id']]);
-$trashProjects = $trashStmt->fetchAll();
 $archiveStmt = db()->prepare('SELECT p.*, u.name AS owner_name, u.email AS owner_email, CASE WHEN p.user_id = ? THEN 1 ELSE 0 END AS is_owner, COALESCE(ps.permission, CASE WHEN p.user_id = ? THEN \'manage\' ELSE ps.permission END) AS permission, COUNT(DISTINCT c.id) circuits, COUNT(DISTINCT i.id) items FROM projects p JOIN users u ON u.id = p.user_id LEFT JOIN project_shares ps ON ps.project_id = p.id AND ps.user_id = ? LEFT JOIN circuits c ON c.project_id = p.id LEFT JOIN plan_items i ON i.project_id = p.id WHERE p.deleted_at IS NULL AND p.archived_at IS NOT NULL AND (p.user_id = ? OR ps.user_id = ?) GROUP BY p.id ORDER BY p.archived_at DESC');
 $archiveStmt->execute([(int)$user['id'], (int)$user['id'], (int)$user['id'], (int)$user['id'], (int)$user['id']]);
 $archivedProjects = $archiveStmt->fetchAll();
 
 $allTags = all_project_tags();
-$allProjectIds = array_map(fn($p) => (int)$p['id'], array_merge($projects, $archivedProjects, $trashProjects));
+$allProjectIds = array_map(fn($p) => (int)$p['id'], array_merge($projects, $archivedProjects));
 $projectTags = project_tags_grouped($allProjectIds);
 $dashboardStats = [
     'active' => count($projects),
@@ -272,27 +269,7 @@ require __DIR__ . '/inc/header.php';
         <?php endif; ?>
       </div>
 
-      <div class="card p-4 mt-4">
-        <h2 class="h4 mb-3"><i class="bi bi-trash me-2"></i>Papierkorb</h2>
-        <?php if (!$trashProjects): ?>
-          <p class="text-muted mb-0">Keine gelöschten Projekte.</p>
-        <?php else: ?>
-          <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Projekt</th><th>Gelöscht am</th><th>Inhalt</th><th class="text-end">Aktion</th></tr></thead><tbody>
-          <?php foreach ($trashProjects as $p): ?>
-            <tr>
-              <td class="fw-semibold"><?= e($p['name']) ?></td>
-              <td><?= e($p['deleted_at']) ?></td>
-              <td><?= (int)$p['circuits'] ?> Stromkreis(e), <?= (int)$p['items'] ?> Position(en)</td>
-              <td class="text-end">
-                <form method="post" class="d-inline"><input type="hidden" name="action" value="restore"><input type="hidden" name="project_id" value="<?= (int)$p['id'] ?>"><button class="btn btn-sm btn-outline-success">Wiederherstellen</button></form>
-                <button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#purgeProjectModal<?= (int)$p['id'] ?>">Endgültig löschen</button>
-              </td>
-            </tr>
-            <div class="modal fade" id="purgeProjectModal<?= (int)$p['id'] ?>" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><form method="post"><input type="hidden" name="action" value="purge"><input type="hidden" name="project_id" value="<?= (int)$p['id'] ?>"><div class="modal-header"><h5 class="modal-title">Endgültig löschen</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><p>Dieses Projekt wird unwiderruflich gelöscht. Bitte Projektnamen eingeben:</p><p class="fw-semibold"><?= e($p['name']) ?></p><input class="form-control" name="confirm_project_name" required></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Abbrechen</button><button class="btn btn-danger">Endgültig löschen</button></div></form></div></div></div>
-          <?php endforeach; ?>
-          </tbody></table></div>
-        <?php endif; ?>
-      </div>
+
 
     </div>
   </div>
