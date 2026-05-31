@@ -1,11 +1,8 @@
 name: Build Docker Image
 
 on:
-  push:
-    branches:
-      - main
-    tags:
-      - "v*.*.*"
+  release:
+    types: [published]
 
 permissions:
   contents: read
@@ -13,18 +10,15 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: tillesser/powerplanner
+  IMAGE_NAME: Wiwaltill/power-planner
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout release source
         uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -36,12 +30,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push image
+      - name: Extract release tag
+        id: meta
+        run: echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           tags: |
-            ghcr.io/tillesser/powerplanner:latest
-            ghcr.io/tillesser/powerplanner:${{ github.ref_name }}
+            ghcr.io/wiwaltill/power-planner:latest
+            ghcr.io/wiwaltill/power-planner:${{ steps.meta.outputs.tag }}
