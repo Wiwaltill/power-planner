@@ -1,97 +1,55 @@
-# Stromplaner App
+# Power Planner
 
-Kompakte Webanwendung zur Planung und Verteilung von Stromlasten und Scheinwerfern auf die Phasen L1–L3.
+Power Planner ist eine webbasierte Anwendung zur Planung und Dokumentation von Stromverteilungen für Veranstaltungen, Produktionen und temporäre Installationen.
 
 ## Funktionen
 
-* Geräteverwaltung
-* Markenverwaltung
-* Geräte importieren/exportieren
-* JSON-basierte Datenspeicherung
-* Bootstrap Geräte-Dropdown mit Live-Filter
-* Drag & Drop zwischen L1 / L2 / L3
-* Live Berechnung von Watt & Ampere
-* Bearbeitung von Anzahl & Bemerkungen direkt im Plan
-* Druckfertiger PDF-Export
-* Clean URLs ohne `.php`
+* Projektverwaltung
+* Gerätebibliothek
+* Stromkreisplanung
+* Lastberechnung
+* Projektfreigaben für Nutzer
+* Öffentliche Web-Freigaben
+* PDF-, Excel- und CSV-Export
+* QR-Codes für Web-Freigaben
+* Rollen- und Benutzerverwaltung
+* Projektstatus und Tags
+* Backup & Wiederherstellung
+* GitHub-Updater
+* Docker-Unterstützung
 
----
+## Systemanforderungen
+
+* PHP 8+
+* MySQL / MariaDB
+* Apache oder Nginx
+
+Alternativ:
+
+* Docker
+* Docker Compose
 
 ## Installation
 
-Projekt auf einen PHP-/Apache-Server kopieren.
+### Klassisch
 
-Wichtig:
+1. Dateien auf den Webserver hochladen
+2. Datenbank anlegen
+3. Installer aufrufen
+4. Administrator erstellen
 
-* `.htaccess` muss erlaubt sein (`mod_rewrite`)
-* PHP Schreibrechte für `/data`
+### Docker
 
----
+```bash
+docker compose up -d
+```
 
-## Datenstruktur
+Anschließend den Installer im Browser aufrufen.
 
-### Beispielgeräte
+## Ziel
 
-`data/devices.json`
+Power Planner soll die Planung von Stromverteilungen übersichtlich, nachvollziehbar und effizient gestalten – von kleinen Veranstaltungen bis hin zu komplexen Projekten.
 
-Wird nur als Vorlage genutzt.
+## Lizenz
 
-### Eigene Geräte
-
-`data/devices.user.json`
-
-Wird automatisch erstellt sobald eigene Geräte gespeichert oder importiert werden.
-
----
-
-## Geräte Import / Export
-
-### Export
-
-Geräteverwaltung → `Exportieren`
-
-### Import
-
-Geräteverwaltung → `Importieren`
-
-Importierte Geräte ergänzen oder aktualisieren bestehende Einträge.
-
----
-
-## PDF Export
-
-Im Stromplan:
-`PDF exportieren`
-
-Anschließend im Browser:
-`Als PDF speichern`
-
----
-
-## URL Struktur
-
-Beispiele:
-
-* `/devices`
-* `/planner`
-
-statt:
-
-* `/devices.php`
-* `/planner.php`
-
----
-
-## Technologien
-
-* PHP
-* Bootstrap
-* JavaScript
-* HTML5 Drag & Drop
-* JSON Storage
-
----
-
-## Hinweis
-
-Die App wurde bewusst ohne komplexes Framework aufgebaut, damit Updates und Erweiterungen einfach möglich bleiben.
+MIT License
